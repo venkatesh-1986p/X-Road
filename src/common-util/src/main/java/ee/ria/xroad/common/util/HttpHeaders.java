@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,6 +38,8 @@ public final class HttpHeaders {
 
     public static final String CONTENT_TRANSFER_ENCODING =
             "content-transfer-encoding";
+
+    public static final String CONTENT_DISPOSITION = "Content-Disposition";
 
     private HttpHeaders() {
     }

@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,6 +34,8 @@ import org.apache.commons.io.IOUtils;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -39,6 +43,7 @@ import org.junit.rules.ExpectedException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -55,6 +60,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -79,13 +86,24 @@ public class LogArchiveCacheTest {
     private static final long LOG_TIME_REQUEST_LARGE_EARLIEST = 1428664660610L;
     private static final long LOG_TIME_RESPONSE_NORMAL = 1428664927050L;
 
-    private LogArchiveCache cache = createCache(getMockRandomGenerator());
+    private LogArchiveCache cache;
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
+    @Before
+    public void setup() {
+        cache = createCache(getMockRandomGenerator());
+    }
+
+    @After
+    public void tearDown() throws IOException {
+        cache.close();
+    }
+
     /**
      * Test to ensure one entry of normal size can be added successfully.
+     *
      * @throws Exception in case of any unexpected errors
      */
     @Test
@@ -109,6 +127,7 @@ public class LogArchiveCacheTest {
 
     /**
      * Test to ensure log archive is rotated if an entry is too large.
+     *
      * @throws Exception in case of any unexpected errors
      */
     @Test
@@ -128,6 +147,7 @@ public class LogArchiveCacheTest {
 
     /**
      * Test to ensure null message records are not allowed.
+     *
      * @throws Exception in case of any unexpected errors
      */
     @Test
@@ -141,6 +161,7 @@ public class LogArchiveCacheTest {
 
     /**
      * Test to ensure the log archive is rotated inbetween log entry additions.
+     *
      * @throws Exception in case of any unexpected errors
      */
     @Test
@@ -172,6 +193,7 @@ public class LogArchiveCacheTest {
 
     /**
      * Test to ensure name clash is avoided when fileName already exists in ZIP.
+     *
      * @throws Exception in case of any unexpected errors
      */
     @Test
@@ -248,7 +270,11 @@ public class LogArchiveCacheTest {
         when(record.getTime()).thenReturn(params.getCreationTime());
 
         AsicContainer container = mock(AsicContainer.class);
-        when(container.getBytes()).thenReturn(params.getBytes());
+        doAnswer(invocation -> {
+            OutputStream os = (OutputStream) invocation.getArguments()[0];
+            os.write(params.getBytes());
+            return null;
+        }).when(container).write(any(OutputStream.class));
 
         when(record.toAsicContainer()).thenReturn(container);
 
@@ -370,9 +396,9 @@ public class LogArchiveCacheTest {
 
     private LogArchiveCache createCache(Supplier<String> randomGenerator) {
         return new LogArchiveCache(
-            randomGenerator,
-            mockLinkingInfoBuilder(),
-            Paths.get("build/tmp/")
+                randomGenerator,
+                mockLinkingInfoBuilder(),
+                Paths.get("build/tmp/")
         );
     }
 

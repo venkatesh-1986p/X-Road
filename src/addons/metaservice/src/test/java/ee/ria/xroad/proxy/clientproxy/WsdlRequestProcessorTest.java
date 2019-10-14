@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,9 +35,9 @@ import ee.ria.xroad.common.message.SoapFault;
 import ee.ria.xroad.common.message.SoapMessageImpl;
 import ee.ria.xroad.common.util.MimeUtils;
 import ee.ria.xroad.proxy.conf.KeyConf;
-import ee.ria.xroad.proxy.testsuite.TestGlobalConf;
-import ee.ria.xroad.proxy.testsuite.TestKeyConf;
-import ee.ria.xroad.proxy.testsuite.TestServerConf;
+import ee.ria.xroad.proxy.testsuite.TestSuiteGlobalConf;
+import ee.ria.xroad.proxy.testsuite.TestSuiteKeyConf;
+import ee.ria.xroad.proxy.testsuite.TestSuiteServerConf;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -95,6 +97,7 @@ public class WsdlRequestProcessorTest {
 
 
     private static final int WSDL_SERVER_PORT;
+
     static {
         try (ServerSocket s = ServerSocketFactory.getDefault().createServerSocket(0)) {
             s.setReuseAddress(true);
@@ -129,8 +132,8 @@ public class WsdlRequestProcessorTest {
     @Before
     public void init() throws IOException {
 
-        GlobalConf.reload(new TestGlobalConf());
-        KeyConf.reload(new TestKeyConf());
+        GlobalConf.reload(new TestSuiteGlobalConf());
+        KeyConf.reload(new TestSuiteKeyConf());
 
         mockRequest = mock(HttpServletRequest.class);
         mockResponse = mock(HttpServletResponse.class);
@@ -141,7 +144,7 @@ public class WsdlRequestProcessorTest {
 
     @After
     public void tearDown() {
-     this.mockServer.stop();
+        this.mockServer.stop();
     }
 
 
@@ -251,7 +254,7 @@ public class WsdlRequestProcessorTest {
         when(mockRequest.getParameter(eq(WsdlRequestProcessor.PARAM_INSTANCE_IDENTIFIER)))
                 .thenReturn(expectedCentralServiceId.getXRoadInstance());
 
-             when(mockRequest.getParameter(eq(WsdlRequestProcessor.PARAM_SERVICE_CODE)))
+        when(mockRequest.getParameter(eq(WsdlRequestProcessor.PARAM_SERVICE_CODE)))
                 .thenReturn(expectedCentralServiceId.getServiceCode());
 
         WsdlRequestProcessor processorToTest = new WsdlRequestProcessor(mockRequest, mockResponse);
@@ -354,7 +357,7 @@ public class WsdlRequestProcessorTest {
         final SecurityServerId providedIdentifier = SecurityServerId.create(EXPECTED_XR_INSTANCE,
                 "memberClassGov", "memberCode11", "serverCode_");
 
-        ServerConf.reload(new TestServerConf() {
+        ServerConf.reload(new TestSuiteServerConf() {
             @Override
             public SecurityServerId getIdentifier() {
                 return providedIdentifier;
@@ -426,7 +429,7 @@ public class WsdlRequestProcessorTest {
         final SecurityServerId providedIdentifier = SecurityServerId.create(EXPECTED_XR_INSTANCE,
                 "memberClassGov", "memberCode11", "serverCode_");
 
-        ServerConf.reload(new TestServerConf() {
+        ServerConf.reload(new TestSuiteServerConf() {
             @Override
             public SecurityServerId getIdentifier() {
                 return providedIdentifier;

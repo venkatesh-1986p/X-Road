@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +37,7 @@ public final class MetadataRequests {
     public static final String WSDL = "/wsdl";
     public static final String LIST_METHODS = "listMethods";
     public static final String ALLOWED_METHODS = "allowedMethods";
+    public static final String GET_OPENAPI = "getOpenAPI";
     public static final String GET_WSDL = "getWsdl";
     public static final String ASIC = "/asic";
     public static final String VERIFICATIONCONF = "/verificationconf";

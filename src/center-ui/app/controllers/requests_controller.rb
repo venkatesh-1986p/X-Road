@@ -1,6 +1,8 @@
 #
 # The MIT License
-# Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+# Copyright (c) 2018 Estonian Information System Authority (RIA),
+# Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+# Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -140,6 +142,17 @@ class RequestsController < ApplicationController
     render_json(get_client_data(request))
   end
 
+  def get_owner_change_request_data
+    authorize!(:view_management_request_details)
+
+    validate_params({
+      :id => [:required]
+    })
+
+    request = OwnerChangeRequest.find(params[:id])
+    render_json(get_client_data(request))
+  end
+
   # -- Specific GET methods - end ---
 
   # -- Specific POST methods - start ---
@@ -225,6 +238,45 @@ class RequestsController < ApplicationController
     render_json
   end
 
+  def approve_owner_change_request
+    audit_log("Approve owner change request", audit_log_data = {})
+
+    authorize!(:view_management_request_details)
+
+    validate_params({
+      :requestId => [:required]
+    })
+
+    audit_log_data[:requestId] = params[:requestId]
+
+    request_id = params[:requestId]
+    RequestWithProcessing.approve(request_id)
+
+    notice(t("requests.request_approved",
+        {:id => request_id}))
+
+    render_json
+  end
+
+  def decline_owner_change_request
+    audit_log("Decline owner change request", audit_log_data = {})
+
+    authorize!(:view_management_request_details)
+
+    validate_params({
+      :requestId => [:required]
+    })
+
+    audit_log_data[:requestId] = params[:requestId]
+
+    request_id = params[:requestId]
+    RequestWithProcessing.decline(request_id)
+
+    notice(t("requests.request_declined",
+        {:id => request_id}))
+
+    render_json
+  end
   # -- Specific POST methods - end ---
 
   private

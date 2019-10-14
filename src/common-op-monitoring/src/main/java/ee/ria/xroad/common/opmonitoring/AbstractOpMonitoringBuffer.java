@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2016 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,25 +37,27 @@ public abstract class AbstractOpMonitoringBuffer extends UntypedActor {
     public static final String SENDING_SUCCESS = "sendingSuccess";
     public static final String SENDING_FAILURE = "sendingFailure";
 
+    private static final String LOGGING_FORMAT = "onReceive: {}";
+
     @Override
     public void onReceive(Object message) throws Exception {
         try {
             if (message instanceof OpMonitoringData) {
                 OpMonitoringData data = (OpMonitoringData) message;
 
-                log.trace("onReceive: {}", data);
+                log.trace(LOGGING_FORMAT, data);
 
                 store(data);
             } else if (message.equals(SEND_MONITORING_DATA)) {
-                log.trace("onReceive: {}", SEND_MONITORING_DATA);
+                log.trace(LOGGING_FORMAT, SEND_MONITORING_DATA);
 
                 send();
             } else if (message.equals(SENDING_SUCCESS)) {
-                log.trace("onReceive: {}", SENDING_SUCCESS);
+                log.trace(LOGGING_FORMAT, SENDING_SUCCESS);
 
                 sendingSuccess();
             } else if (message.equals(SENDING_FAILURE)) {
-                log.trace("onReceive: {}", SENDING_FAILURE);
+                log.trace(LOGGING_FORMAT, SENDING_FAILURE);
 
                 sendingFailure();
             } else {

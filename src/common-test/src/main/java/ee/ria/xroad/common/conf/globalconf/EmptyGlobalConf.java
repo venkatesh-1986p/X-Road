@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -123,10 +125,12 @@ public class EmptyGlobalConf implements GlobalConfProvider {
 
     @Override
     public void save() throws Exception {
+        // Empty configuration is not saved
     }
 
     @Override
     public void save(OutputStream out) throws Exception {
+        // Empty configuration is not saved
     }
 
     @Override
@@ -163,6 +167,7 @@ public class EmptyGlobalConf implements GlobalConfProvider {
 
     @Override
     public void load(String fileName) throws Exception {
+        // Empty configuration cannot be loaded
     }
 
     @Override

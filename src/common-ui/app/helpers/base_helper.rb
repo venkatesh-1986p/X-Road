@@ -1,6 +1,8 @@
 #
 # The MIT License
-# Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+# Copyright (c) 2018 Estonian Information System Authority (RIA),
+# Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+# Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -69,12 +71,6 @@ module BaseHelper
     render :partial => "layouts/partials/heading", :locals => {:text => text}
   end
 
-  def default_content_for(name, &block)
-    name = name.kind_of?(Symbol) ? ":#{name}" : name
-    out = eval("yield #{name}", block.binding)
-    concat(out && !out.empty? ? out : capture(&block))
-  end
-
   def flash_message(type)
     flash.discard(type).join("<br />") if flash[type]
   end
@@ -112,6 +108,7 @@ module BaseHelper
   end
 
   def server_status_class
+    #NOP
   end
 
   def available_locales
@@ -128,14 +125,18 @@ module BaseHelper
   end
 
   def instance_identifier
+    # NOP
   end
 
   def server_code
+    # NOP
   end
+
   def skin_installed?
     File.exists?(SystemProperties.getConfPath + BaseController::UI_SKIN_FILE)
   end
 
   def node_name
+    # NOP
   end
 end

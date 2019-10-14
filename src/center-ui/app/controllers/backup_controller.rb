@@ -1,6 +1,8 @@
 #
 # The MIT License
-# Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+# Copyright (c) 2018 Estonian Information System Authority (RIA),
+# Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+# Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -62,6 +64,7 @@ class BackupController < BaseBackupController
   end
 
   def after_restore_success
+    # NOP
   end
 
   def backup_restore_script_options

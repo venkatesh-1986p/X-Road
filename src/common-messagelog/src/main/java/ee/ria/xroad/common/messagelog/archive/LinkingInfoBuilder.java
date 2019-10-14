@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -59,8 +61,8 @@ class LinkingInfoBuilder {
         this.lastDigest = lastArchive.getDigest();
     }
 
-    void addNextFile(String fileName, byte[] fileBytes) {
-        String combinedDigests = lastDigest + hexDigest(fileBytes);
+    void addNextFile(String fileName, byte[] digest) {
+        String combinedDigests = lastDigest + CryptoUtils.encodeHex(digest);
         String currentDigest =
                 hexDigest(combinedDigests.getBytes(StandardCharsets.UTF_8));
 
@@ -87,7 +89,7 @@ class LinkingInfoBuilder {
                 .append(hashAlgoId).append('\n');
 
         digestsForFiles.forEach(each ->
-            builder.append(each.toLinkingInfoEntry()).append('\n')
+                builder.append(each.toLinkingInfoEntry()).append('\n')
         );
 
         return builder.toString().getBytes(StandardCharsets.UTF_8);

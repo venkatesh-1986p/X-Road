@@ -15,6 +15,16 @@ ss_modules:
     build: build
     lib: proxymonitor-metaservice-1.0.jar
     target: /usr/share/xroad/jlib/addon/proxy
+  addon-proxy-messagelog:
+    dir: addons/messagelog
+    build: build
+    lib: messagelog-1.0.jar
+    target: /usr/share/xroad/jlib/addon/proxy
+  addon-metaservice:
+    dir: addons/metaservice
+    build: build
+    lib: metaservice-1.0.jar
+    target: /usr/share/xroad/jlib/addon/proxy
   configuration-client:
     dir: configuration-client
     build: build

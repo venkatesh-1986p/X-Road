@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,8 +25,10 @@
 package ee.ria.xroad.common.conf.serverconf;
 
 import ee.ria.xroad.common.SystemProperties;
+import ee.ria.xroad.common.conf.globalconf.GlobalConf;
 import ee.ria.xroad.common.conf.globalconf.TimeBasedObjectCache;
 import ee.ria.xroad.common.identifier.ClientId;
+import ee.ria.xroad.common.identifier.SecurityServerId;
 
 import java.util.List;
 
@@ -37,14 +41,12 @@ import java.util.List;
 public class CachingServerConfImpl extends ServerConfImpl {
 
     public static final String TSP_URL = "tsp_url";
-    public static final String MEMBERS = "members";
     public static final String MEMBER_STATUS = "member_status";
     public static final String AUTHENTICATION = "authentication";
-    public static final String IDENTIFIER = "identifier";
-
 
     private final int expireSeconds;
     private final TimeBasedObjectCache cache;
+    private volatile SecurityServerId serverId;
 
     /**
      * Constructor, creates time based object cache with expireSeconds paramter
@@ -53,6 +55,30 @@ public class CachingServerConfImpl extends ServerConfImpl {
         super();
         expireSeconds = SystemProperties.getServerConfCachePeriod();
         cache = new TimeBasedObjectCache(expireSeconds);
+    }
+
+    @Override
+    public SecurityServerId getIdentifier() {
+        SecurityServerId id = serverId;
+        if (id == null) {
+            return getAndCacheServerId(null);
+        } else {
+            if (GlobalConf.getServerOwner(id) == null) {
+                // Globalconf and the cached value disagree on server owner (maybe changed)
+                return getAndCacheServerId(id);
+            } else {
+                return id;
+            }
+        }
+    }
+
+    @SuppressWarnings("checkstyle:innerassignment")
+    private synchronized SecurityServerId getAndCacheServerId(final SecurityServerId current) {
+        SecurityServerId id = serverId;
+        if (id == current) { //intentional reference equality test (for double-checked locking)
+            serverId = id = super.getIdentifier();
+        }
+        return id;
     }
 
     @Override

@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -47,7 +49,7 @@ public abstract class HandlerBase extends AbstractHandler {
      * @param ex exception that should be converted to a SOAP fault
      * @throws IOException if an I/O error occurred
      */
-    public static void sendErrorResponse(HttpServletResponse response, CodedException ex) throws IOException {
+    public void sendErrorResponse(HttpServletResponse response, CodedException ex) throws IOException {
         String faultXml = ex instanceof CodedException.Fault
                 ? ((CodedException.Fault) ex).getFaultXml() : SoapFault.createFaultXml(ex);
         String encoding = MimeUtils.UTF8;
@@ -68,7 +70,7 @@ public abstract class HandlerBase extends AbstractHandler {
      * @param message fault message
      * @throws IOException if an I/O error occurred
      */
-    public static void sendPlainTextErrorResponse(HttpServletResponse response, int status, String message)
+    public void sendPlainTextErrorResponse(HttpServletResponse response, int status, String message)
             throws IOException {
         byte[] messageBytes = message.getBytes("UTF-8");
         response.setStatus(status);

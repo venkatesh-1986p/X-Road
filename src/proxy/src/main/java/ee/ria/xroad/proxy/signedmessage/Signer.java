@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -47,6 +49,17 @@ public class Signer {
      */
     public void addPart(String name, String hashMethod, byte[] data) {
         builder.addPart(new MessagePart(name, hashMethod, data, null));
+
+    }
+
+    /** Adds new part to be signed.
+     * @param name name of the file in the BDOC container.
+     * @param hashMethod identifier of the algorithm used to calculate the hash
+     * @param data the data.
+     * @param message the message
+     */
+    public void addPart(String name, String hashMethod, byte[] data, byte[] message) {
+        builder.addPart(new MessagePart(name, hashMethod, data, message));
 
     }
 

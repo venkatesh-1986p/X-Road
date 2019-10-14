@@ -1,7 +1,11 @@
+# X-Road Data Exchange Layer
+
+[![Go to X-Road Community Slack](https://img.shields.io/badge/Go%20to%20Community%20Slack-grey.svg)](https://jointxroad.slack.com/)
+[![Get invited](https://img.shields.io/badge/No%20Slack-Get%20invited-green.svg)](https://x-road.global/join-the-xroad-community)
 
 ![X-Road logo](xroad_logo_small.png) ![European Regional Development Fund](eu_logo.png "European Regional Development Fund - DO NOT REMOVE THIS IMAGE BEFORE 01.11.2022")
 
-## About the repository
+## About the repository 
 
 This repository contains information about the X-Road, source codes, its development, installation and documentation.
 
@@ -91,12 +95,6 @@ with regard to the X-Road core:
 Support for member organizations of X-tee and Suomi.fi-palveluväylä is provided
 by [RIA](https://www.ria.ee) (X-tee) and [VRK](https://www.vrk.fi) (Suomi.fi-palveluväylä).
 
-Consultation services for deploying independent X-Road instances should be obtained from enterprises with such services. Known organizations are:
-
-* [Aktors OÜ](http://www.aktors.ee)
-* [Cybercom Finland Oy](http://www.cybercom.fi)
-* [Cybernetica AS](https://cyber.ee)
-* [Gofore Oyj](https://www.gofore.com)
-* [Roksnet Solutions OÜ](https://roksnet.com)
+[X-Road Technology Partners](https://x-road.global/xroad-technology-partners) are enterprises providing X-Road consultation services, e.g. deploying independent X-Road instances, developing X-Road extensions and X-Road-compatible services, integrating informations systems with X-Road etc.
 
 No support for X-Road deployment is provided here.

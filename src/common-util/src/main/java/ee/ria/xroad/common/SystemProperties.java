@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +28,6 @@ import ee.ria.xroad.common.util.CryptoUtils;
 
 import java.util.Arrays;
 
-
 /**
  * Contains system-wide constants for system properties.
  */
@@ -37,6 +38,8 @@ public final class SystemProperties {
 
     /** The prefix for all properties. */
     public static final String PREFIX = "xroad.";
+
+    private static final String COMMA_SPLIT = "\\s*,\\s*";
 
     // Common -----------------------------------------------------------------
 
@@ -50,6 +53,9 @@ public final class SystemProperties {
 
     /** Current version number of the global configuration **/
     public static final int CURRENT_GLOBAL_CONFIGURATION_VERSION = 2;
+
+    /** Minimum supported version number of the global configuration **/
+    static final int MINIMUM_SUPPORTED_GLOBAL_CONFIGURATION_VERSION = 2;
 
     /** Default minimum supported global conf version on central server */
     public static final String DEFAULT_MINIMUM_CENTRAL_SERVER_GLOBAL_CONFIGURATION_VERSION = "2";
@@ -152,6 +158,9 @@ public final class SystemProperties {
     private static final String PROXY_CLIENT_TLS_CIPHERS =
             PREFIX + "proxy.client-tls-ciphers";
 
+    /** Property name of the ClientProxy HTTPS client and ServerProxy HTTPS connector supported TLS cipher suites */
+    private static final String PROXY_XROAD_TLS_CIPHERS = PREFIX + "proxy.xroad-tls-ciphers";
+
     private static final String SIGNER_ENFORCE_TOKEN_PIN_POLICY =
             PREFIX + "signer.enforce-token-pin-policy";
 
@@ -162,12 +171,26 @@ public final class SystemProperties {
     private static final String SERVERPROXY_CONNECTOR_MAX_IDLE_TIME =
             PREFIX + "proxy.server-connector-max-idle-time";
 
+    /**
+     * Property name of the idle time that connections to the serverproxy connector are initially allowed,
+     * in milliseconds
+     */
+    private static final String SERVERPROXY_CONNECTOR_INITIAL_IDLE_TIME =
+            PREFIX + "proxy.server-connector-initial-idle-time";
+
     /** Property name of the server Connector socket SO_LINGER timer, in seconds, value of -1 means off */
     private static final String SERVERPROXY_CONNECTOR_SO_LINGER =
             PREFIX + "proxy.server-connector-so-linger";
 
     private static final String SERVERPROXY_SUPPORT_CLIENTS_POOLED_CONNECTIONS =
             PREFIX + "proxy.server-support-clients-pooled-connections";
+
+    /**
+     * Property name of the idle time that connections to the clientproxy connector are initially allowed,
+     * in milliseconds
+     */
+    private static final String CLIENTPROXY_CONNECTOR_INITIAL_IDLE_TIME =
+            PREFIX + "proxy.client-connector-initial-idle-time";
 
     /** Property name of the idle time that ClientProxy connections are allowed, in milliseconds */
     private static final String CLIENTPROXY_CONNECTOR_MAX_IDLE_TIME =
@@ -177,8 +200,10 @@ public final class SystemProperties {
     private static final String CLIENTPROXY_CONNECTOR_SO_LINGER =
             PREFIX + "proxy.client-connector-so-linger";
 
-    /** Property name for he connection maximum idle time that should be set for client proxy apache HttpClient,
-     * in milliseconds, value 0 means infinite timeout, -1 means the system default */
+    /**
+     * Property name for he connection maximum idle time that should be set for client proxy apache HttpClient,
+     * in milliseconds, value 0 means infinite timeout, -1 means the system default
+     */
     private static final String CLIENTPROXY_HTTPCLIENT_TIMEOUT =
             PREFIX + "proxy.client-httpclient-timeout";
 
@@ -219,7 +244,17 @@ public final class SystemProperties {
 
     private static final String PROXY_ACTORSYSTEM_PORT = PREFIX + "proxy.actorsystem-port";
 
+    private static final String DEFAULT_CENTER_TRUSTED_ANCHORS_ALLOWED = "false";
+
+    private static final String DEFAULT_CENTER_AUTO_APPROVE_AUTH_CERT_REG_REQUESTS = "false";
+
+    private static final String DEFAULT_CENTER_AUTO_APPROVE_CLIENT_REG_REQUESTS = "false";
+
+    private static final String DEFAULT_CENTER_AUTO_APPROVE_OWNER_CHANGE_REQUESTS = "false";
+
     private static final String DEFAULT_SERVERPROXY_CONNECTOR_MAX_IDLE_TIME = "0";
+
+    private static final String DEFAULT_PROXY_CONNECTOR_INITIAL_IDLE_TIME = "30000";
 
     private static final String DEFAULT_SERVERPROXY_CONNECTOR_SO_LINGER = "-1";
 
@@ -233,6 +268,8 @@ public final class SystemProperties {
 
     private static final String DEFAULT_CLIENTPROXY_HTTPCLIENT_SO_LINGER = "-1";
 
+    public static final String DEFAULT_OCSP_RESPONDER_CLIENT_READ_TIMEOUT = "30000";
+
     private static final String DEFAULT_CLIENTPROXY_POOL_IDLE_MONITOR_INTERVAL = "30000";
 
     private static final String DEFAULT_CLIENTPROXY_POOL_IDLE_MONITOR_IDLE_TIME = "60000";
@@ -243,6 +280,8 @@ public final class SystemProperties {
 
     private static final String DEFAULT_CLIENTPROXY_POOL_DEFAULT_MAX_CONN_PER_ROUTE = "2500";
 
+    private static final String DEFAULT_CLIENTPROXY_TIMEOUT = "30000";
+
     private static final String DEFAULT_CLIENTPROXY_USE_FASTEST_CONNECTING_SSL_SOCKET_AUTOCLOSE = "true";
 
     private static final String DEFAULT_CLIENTPROXY_FASTEST_CONNECTING_SSL_URI_CACHE_PERIOD = "3600";
@@ -251,13 +290,19 @@ public final class SystemProperties {
 
     private static final String DEFAULT_CLIENTPROXY_POOL_VALIDATE_CONNECTIONS_AFTER_INACTIVITY_OF_MS = "2000";
 
-    /** The default value of the on/off switch for a group of settings that affect whether or not pooled connections
-     * for the ClientProxy can be actually reused **/
+    /**
+     * The default value of the on/off switch for a group of settings that affect whether or not pooled connections
+     * for the ClientProxy can be actually reused
+     **/
     private static final String DEFAULT_CLIENTPROXY_POOL_REUSE_CONNECTIONS = "false";
 
     private static final String DEFAULT_PROXY_HEALTH_CHECK_INTERFACE = "0.0.0.0";
 
     private static final String DEFAULT_PROXY_HEALTH_CHECK_PORT = "0";
+
+    public static final String DEFAULT_SIGNER_ENFORCE_TOKEN_PIN_POLICY = "false";
+
+    public static final String DEFAULT_ALLOW_GET_WSDL_REQUEST = "false";
 
     private static final String OCSP_VERIFIER_CACHE_PERIOD =
             PREFIX + "proxy.ocsp-verifier-cache-period";
@@ -298,6 +343,8 @@ public final class SystemProperties {
     public static final int MIN_SIGNER_KEY_LENGTH = 2048;
     public static final int DEFAULT_SIGNER_KEY_LENGTH = MIN_SIGNER_KEY_LENGTH;
 
+    public static final String DEFAULT_SIGNER_CLIENT_TIMEOUT = "60000";
+
     public static final String SIGNER_CSR_SIGNATURE_DIGEST_ALGORITHM =
             PREFIX + "signer.csr-signature-digest-algorithm";
 
@@ -308,6 +355,11 @@ public final class SystemProperties {
             PREFIX + "signer.ocsp-retry-delay";
 
     private static final String DEFAULT_SIGNER_OCSP_RETRY_DELAY = "60";
+
+    public static final String SIGNER_MODULE_MANAGER_UPDATE_INTERVAL =
+            PREFIX + "signer.module-manager-update-interval";
+
+    public static final String DEFAULT_SIGNER_MODULE_MANAGER_UPDATE_INTERVAL = "60";
 
     // AntiDos ----------------------------------------------------------------
 
@@ -323,7 +375,7 @@ public final class SystemProperties {
     public static final String ANTIDOS_MAX_CPU_LOAD =
             PREFIX + "anti-dos.max-cpu-load";
 
-    /** Property name of the minimum number of free file handles*/
+    /** Property name of the minimum number of free file handles */
     public static final String ANTIDOS_MIN_FREE_FILEHANDLES =
             PREFIX + "anti-dos.min-free-file-handles";
 
@@ -375,6 +427,18 @@ public final class SystemProperties {
     public static final String CONF_BACKUP_PATH =
             PREFIX + "center.conf-backup-path";
 
+    /** Property name of enabling automatic approval of auth cert registration requests. */
+    public static final String CENTER_AUTO_APPROVE_AUTH_CERT_REG_REQUESTS =
+            PREFIX + "center.auto-approve-auth-cert-reg-requests";
+
+    /** Property name of enabling automatic approval of client registration requests. */
+    public static final String CENTER_AUTO_APPROVE_CLIENT_REG_REQUESTS =
+            PREFIX + "center.auto-approve-client-reg-requests";
+
+    /** Property name of enabling automatic approval of owner change requests. */
+    public static final String CENTER_AUTO_APPROVE_OWNER_CHANGE_REQUESTS =
+            PREFIX + "center.auto-approve-owner-change-requests";
+
     // Misc -------------------------------------------------------------------
 
     /** Property name of the configuration files path. */
@@ -399,8 +463,10 @@ public final class SystemProperties {
     public static final String WSDL_VALIDATOR_COMMAND =
             PREFIX + "proxy-ui.wsdl-validator-command";
 
-    /** Property name of the signature digest algorithm ID used for generating authentication certificate
-     *  registration request. */
+    /**
+     * Property name of the signature digest algorithm ID used for generating authentication certificate
+     * registration request.
+     */
     private static final String PROXYUI_AUTH_CERT_REG_SIGNATURE_DIGEST_ALGORITHM_ID =
             PREFIX + "proxy-ui.auth-cert-reg-signature-digest-algorithm-id";
 
@@ -501,8 +567,10 @@ public final class SystemProperties {
     public enum NodeType {
         STANDALONE, MASTER, SLAVE;
 
-        /** Parse an enum (ignoring case) from the given String or return the default {@link #STANDALONE}
-         *  if the argument is not understood.
+        /**
+         * Parse an enum (ignoring case) from the given String or return the default {@link #STANDALONE}
+         * if the argument is not understood.
+         *
          * @param name
          * @return
          */
@@ -719,7 +787,7 @@ public final class SystemProperties {
      * @return the client proxy connect timeout in milliseconds, '30000' by default.
      */
     public static int getClientProxyTimeout() {
-        return Integer.parseInt(System.getProperty(PROXY_CLIENT_TIMEOUT, "30000"));
+        return Integer.parseInt(System.getProperty(PROXY_CLIENT_TIMEOUT, DEFAULT_CLIENTPROXY_TIMEOUT));
     }
 
     /**
@@ -761,7 +829,7 @@ public final class SystemProperties {
      * @return the signer connection timeout in milliseconds, '60000' by default.
      */
     public static int getSignerClientTimeout() {
-        return Integer.parseInt(System.getProperty(SIGNER_CLIENT_TIMEOUT, "60000"));
+        return Integer.parseInt(System.getProperty(SIGNER_CLIENT_TIMEOUT, DEFAULT_SIGNER_CLIENT_TIMEOUT));
     }
 
     /**
@@ -789,11 +857,18 @@ public final class SystemProperties {
 
     /**
      * @return the OCSP-response retry delay in seconds that should be set for signer, 60 by default
-     *
      */
     public static int getOcspResponseRetryDelay() {
         return Integer.parseInt(System.getProperty(SIGNER_OCSP_RETRY_DELAY,
                 DEFAULT_SIGNER_OCSP_RETRY_DELAY));
+    }
+
+    /**
+     * @return the module manager update interval in seconds that should be set for signer, 60 by default
+     */
+    public static int getModuleManagerUpdateInterval() {
+        return Integer.parseInt(System.getProperty(SIGNER_MODULE_MANAGER_UPDATE_INTERVAL,
+                DEFAULT_SIGNER_MODULE_MANAGER_UPDATE_INTERVAL));
     }
 
     /**
@@ -850,7 +925,8 @@ public final class SystemProperties {
      * @return the OCSP Responder Client read timeout in milliseconds, '30000' by default.
      */
     public static int getOcspResponderClientReadTimeout() {
-        return Integer.parseInt(System.getProperty(OCSP_RESPONDER_CLIENT_READ_TIMEOUT, "30000"));
+        return Integer.parseInt(System.getProperty(OCSP_RESPONDER_CLIENT_READ_TIMEOUT,
+                DEFAULT_OCSP_RESPONDER_CLIENT_READ_TIMEOUT));
     }
 
     /**
@@ -872,7 +948,8 @@ public final class SystemProperties {
      * @return whether configuration of trusted anchors is enabled in the central server UI, 'true' by default.
      */
     public static boolean getCenterTrustedAnchorsAllowed() {
-        return "true".equalsIgnoreCase(System.getProperty(CENTER_TRUSTED_ANCHORS_ALLOWED, "false"));
+        return "true".equalsIgnoreCase(System.getProperty(CENTER_TRUSTED_ANCHORS_ALLOWED,
+                DEFAULT_CENTER_TRUSTED_ANCHORS_ALLOWED));
     }
 
     /**
@@ -897,6 +974,30 @@ public final class SystemProperties {
      */
     public static String getCenterGeneratedConfDir() {
         return System.getProperty(CENTER_GENERATED_CONF_DIR, DefaultFilepaths.DISTRIBUTED_GLOBALCONF_PATH);
+    }
+
+    /**
+     * @return whether automatic approval of auth cert registration requests is enabled, 'false' by default.
+     */
+    public static boolean getCenterAutoApproveAuthCertRegRequests() {
+        return Boolean.parseBoolean(System.getProperty(CENTER_AUTO_APPROVE_AUTH_CERT_REG_REQUESTS,
+                DEFAULT_CENTER_AUTO_APPROVE_AUTH_CERT_REG_REQUESTS));
+    }
+
+    /**
+     * @return whether automatic approval of client registration requests is enabled, 'false' by default.
+     */
+    public static boolean getCenterAutoApproveClientRegRequests() {
+        return Boolean.parseBoolean(System.getProperty(CENTER_AUTO_APPROVE_CLIENT_REG_REQUESTS,
+                DEFAULT_CENTER_AUTO_APPROVE_CLIENT_REG_REQUESTS));
+    }
+
+    /**
+     * @return whether automatic approval of owner change requests is enabled, 'false' by default.
+     */
+    public static boolean getCenterAutoApproveOwnerChangeRequests() {
+        return Boolean.parseBoolean(System.getProperty(CENTER_AUTO_APPROVE_OWNER_CHANGE_REQUESTS,
+                DEFAULT_CENTER_AUTO_APPROVE_OWNER_CHANGE_REQUESTS));
     }
 
     /**
@@ -1114,7 +1215,7 @@ public final class SystemProperties {
      * @return protocols.
      */
     public static String[] getProxyClientTLSProtocols() {
-        return System.getProperty(PROXY_CLIENT_TLS_PROTOCOLS, "TLSv1.2").split(",");
+        return System.getProperty(PROXY_CLIENT_TLS_PROTOCOLS, "TLSv1.2").trim().split(COMMA_SPLIT);
     }
 
     private static final String DEFAULT_CLIENT_SSL_CIPHER_SUITES = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,"
@@ -1127,12 +1228,24 @@ public final class SystemProperties {
             + "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384";
 
     /**
-     * Get proxy client's TLS cipher suites.
+     * Get proxy client's accepted TLS cipher suites (between is and ss).
      *
      * @return cipher suites.
      */
     public static String[] getProxyClientTLSCipherSuites() {
-        return System.getProperty(PROXY_CLIENT_TLS_CIPHERS, DEFAULT_CLIENT_SSL_CIPHER_SUITES).split(",");
+        return System.getProperty(PROXY_CLIENT_TLS_CIPHERS, DEFAULT_CLIENT_SSL_CIPHER_SUITES).trim().split(COMMA_SPLIT);
+    }
+
+    private static final String DEFAULT_XROAD_SSL_CIPHER_SUITES = "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,"
+            + "TLS_DHE_RSA_WITH_AES_256_CBC_SHA256";
+
+    /**
+     * Get X-Road accepted TLS cipher suites (between ss and ss).
+     *
+     * @return cipher suites.
+     */
+    public static String[] getXroadTLSCipherSuites() {
+        return System.getProperty(PROXY_XROAD_TLS_CIPHERS, DEFAULT_XROAD_SSL_CIPHER_SUITES).trim().split(COMMA_SPLIT);
     }
 
     /**
@@ -1141,11 +1254,11 @@ public final class SystemProperties {
      * @return true if PIN policy should be enforced.
      */
     public static boolean shouldEnforceTokenPinPolicy() {
-        return Boolean.valueOf(System.getProperty(SIGNER_ENFORCE_TOKEN_PIN_POLICY, "false"));
+        return Boolean.valueOf(System.getProperty(SIGNER_ENFORCE_TOKEN_PIN_POLICY,
+                DEFAULT_SIGNER_ENFORCE_TOKEN_PIN_POLICY));
     }
 
     /**
-     *
      * @return the update interval in seconds at which server conf in cached, '60' by default
      */
     public static int getServerConfCachePeriod() {
@@ -1153,7 +1266,6 @@ public final class SystemProperties {
     }
 
     /**
-     *
      * @return the interval in seconds at which verifier caches results.
      * Max value is 180 seconds and cannot be exceeded in configuration.
      * Default is 60 s.
@@ -1161,6 +1273,14 @@ public final class SystemProperties {
     public static int getOcspVerifierCachePeriod() {
         int period = Integer.parseInt(System.getProperty(OCSP_VERIFIER_CACHE_PERIOD, "60"));
         return period < OCSP_VERIFIER_CACHE_PERIOD_MAX ? period : OCSP_VERIFIER_CACHE_PERIOD_MAX;
+    }
+
+    /**
+     * @return serverproxy initial idle time (used until the request processing starts)
+     */
+    public static long getServerProxyConnectorInitialIdleTime() {
+        return Integer.parseInt(System.getProperty(SERVERPROXY_CONNECTOR_INITIAL_IDLE_TIME,
+                DEFAULT_PROXY_CONNECTOR_INITIAL_IDLE_TIME));
     }
 
     /**
@@ -1173,12 +1293,15 @@ public final class SystemProperties {
     }
 
     /**
-     * @return the so_linger value in seconds that should be set for server proxy connector, 0 by default
-     *
+     * @return the so_linger value in milliseconds that should be set for server proxy connector, -1 (disabled) by
+     * default
      */
+    @SuppressWarnings("checkstyle:magicnumber")
     public static int getServerProxyConnectorSoLinger() {
-        return Integer.parseInt(System.getProperty(SERVERPROXY_CONNECTOR_SO_LINGER,
+        final int linger = Integer.parseInt(System.getProperty(SERVERPROXY_CONNECTOR_SO_LINGER,
                 DEFAULT_SERVERPROXY_CONNECTOR_SO_LINGER));
+        if (linger >= 0) return linger * 1000;
+        return -1;
     }
 
     /**
@@ -1204,6 +1327,14 @@ public final class SystemProperties {
     public static int getClientProxyConnectorSoLinger() {
         return Integer.parseInt(System.getProperty(CLIENTPROXY_CONNECTOR_SO_LINGER,
                 DEFAULT_CLIENTPROXY_CONNECTOR_SO_LINGER));
+    }
+
+    /**
+     * @return clientproxy initial idle time (used until the request processing starts)
+     */
+    public static long getClientProxyConnectorInitialIdleTime() {
+        return Integer.parseInt(System.getProperty(CLIENTPROXY_CONNECTOR_INITIAL_IDLE_TIME,
+                DEFAULT_PROXY_CONNECTOR_INITIAL_IDLE_TIME));
     }
 
     /**
@@ -1289,7 +1420,7 @@ public final class SystemProperties {
      * @return the {@link #NODE_TYPE} in a cluster for this Server.
      */
     public static NodeType getServerNodeType() {
-        return  NodeType.fromStringIgnoreCaseOrReturnDefault(System.getProperty(NODE_TYPE));
+        return NodeType.fromStringIgnoreCaseOrReturnDefault(System.getProperty(NODE_TYPE));
     }
 
     public static boolean isHealthCheckEnabled() {
@@ -1309,25 +1440,34 @@ public final class SystemProperties {
      * @return minimum central server global configuration version or default
      */
     public static int getMinimumCentralServerGlobalConfigurationVersion() {
+        // read the setting
         int version = Integer.parseInt(System.getProperty(MINIMUM_CENTRAL_SERVER_GLOBAL_CONFIGURATION_VERSION,
                 DEFAULT_MINIMUM_CENTRAL_SERVER_GLOBAL_CONFIGURATION_VERSION));
+        // check that it is a valid looking version number
         checkVersionValidity(version, CURRENT_GLOBAL_CONFIGURATION_VERSION,
                 DEFAULT_MINIMUM_CENTRAL_SERVER_GLOBAL_CONFIGURATION_VERSION);
-
+        // ignore the versions that are no longer supported
+        if (version < MINIMUM_SUPPORTED_GLOBAL_CONFIGURATION_VERSION) {
+            version = MINIMUM_SUPPORTED_GLOBAL_CONFIGURATION_VERSION;
+        }
         return version;
     }
 
     /**
-     *
      * @return minimum configuration proxy global configuration version or default
      */
     public static int getMinimumConfigurationProxyGlobalConfigurationVersion() {
+        // read the setting
         int version = Integer.parseInt(System.getProperty(
                 MINIMUM_CONFIGURATION_PROXY_SERVER_GLOBAL_CONFIGURATION_VERSION,
                 DEFAULT_MINIMUM_CONFIGURATION_PROXY_SERVER_GLOBAL_CONFIGURATION_VERSION));
+        // check that it is a valid looking version number
         checkVersionValidity(version, CURRENT_GLOBAL_CONFIGURATION_VERSION,
                 DEFAULT_MINIMUM_CONFIGURATION_PROXY_SERVER_GLOBAL_CONFIGURATION_VERSION);
-
+        // ignore the versions that are no longer supported
+        if (version < MINIMUM_SUPPORTED_GLOBAL_CONFIGURATION_VERSION) {
+            version = MINIMUM_SUPPORTED_GLOBAL_CONFIGURATION_VERSION;
+        }
         return version;
     }
 
@@ -1335,7 +1475,7 @@ public final class SystemProperties {
      * @return whether GET request can be used for getWsdl metaservice, 'false' by default.
      */
     public static boolean isAllowGetWsdlRequest() {
-        return "true".equalsIgnoreCase(System.getProperty(ALLOW_GET_WSDL_REQUEST, "false"));
+        return "true".equalsIgnoreCase(System.getProperty(ALLOW_GET_WSDL_REQUEST, DEFAULT_ALLOW_GET_WSDL_REQUEST));
     }
 
     private static void checkVersionValidity(int version, int current, String defaultVersion) {

@@ -6,8 +6,8 @@
 
 **X-Road Architecture**
 
-Version: 1.7  
-02.03.2018
+Version: 1.9  
+16.04.2019
 <!-- 16 pages -->
 Doc. ID: ARC-G
 
@@ -29,9 +29,11 @@ Doc. ID: ARC-G
  16.12.2015 | 1.3     | Add environmental monitoring                                    | Ilkka Seppälä
  20.12.2016 | 1.4     | Added operational monitoring                                    | Kristo Heero
  20.02.2017 | 1.5     | Converted to Github flavoured Markdown, added license text, adjusted tables for better output in PDF | Toomas Mölder
- 21.12.2017 | 1.6     | Matrix of technologies moved to arc-x-road_technologies.md and chapters reordered | Antti Luoma 
+ 21.12.2017 | 1.6     | Matrix of technologies moved to arc-x-road_technologies.md and chapters reordered | Antti Luoma
  02.03.2018 | 1.7     | Moved terms and abbreviations into the terms document, added terms reference and document links | Tatu Repo
-
+ 02.11.2018 | 1.8     | Described environmental monitoring daemon and its interfaces | Ilkka Seppälä
+ 16.04.2019 | 1.9     | Added REST support and X-Road Message Protocol for REST | Petteri Kivimäki
+ 
 ## Table of Contents
 
 <!-- toc -->
@@ -50,6 +52,7 @@ Doc. ID: ARC-G
   * [2.5 Certification Authority](#25-certification-authority)
   * [2.6 Configuration Proxy](#26-configuration-proxy)
   * [2.7 Operational Monitoring Daemon](#27-operational-monitoring-daemon)
+  * [2.8 Environmental Monitoring Daemon](#28-environmental-monitoring-daemon)
 - [3 Protocols and Interfaces](#3-protocols-and-interfaces)
   * [3.1 X-Road Message Protocol](#31-x-road-message-protocol)
   * [3.2 Protocol for Downloading Configuration](#32-protocol-for-downloading-configuration)
@@ -67,6 +70,7 @@ Doc. ID: ARC-G
   * [3.14 Operational Monitoring JMX](#314-operational-monitoring-jmx)
   * [3.15 Environmental Monitoring Protocol](#315-environmental-monitoring-protocol)
   * [3.16 Environmental Monitoring JMX](#316-environmental-monitoring-jmx)
+  * [3.17 Environmental Monitoring Query](#317-environmental-monitoring-query)
 - [4 Deployment View](#4-deployment-view)
 
 <!-- tocstop -->
@@ -95,7 +99,7 @@ The following list contains main design goals and design decisions of the X-Road
 
 -   All the messages processed by the X-Road are usable as **digital evidence**. The technical solution must comply with requirements for digital seals according to eIDAS \[[EIDAS](#Ref_EIDAS)\]. This implies support for secure signature creation devices (SSCDs).
 
--   All the communication is implemented as **service calls** using the \[[SOAP](#Ref_SOAP)\] protocol. The services are described using the \[[WSDL](#Ref_WSDL)\] language.
+-   All the communication is implemented as \[[SOAP](#Ref_SOAP)\] or REST **service calls**. SOAP services are described using the \[[WSDL](#Ref_WSDL)\] language and REST services are described using the \[[OPENAPI](#Ref_OpenAPI)\] Specification v3.
 
 -   **Cross-border services** – it is possible for an organization to invoke services provided by an organization belonging to a different instance of X-Road.
 
@@ -149,7 +153,7 @@ See X-Road terms and abbreviations documentation \[[TA-TERMS](#Ref_TERMS)\].
 
 18. <a id="Ref_TSP" class="anchor"></a>\[TSP\] Internet X.509 Public Key Infrastructure Time-Stamp Protocol (TSP). Intenet Engineering Task Force, RFC 3161, 2001.
 
-19. <a id="Ref_UG-SIGDOC" class="anchor"></a>\[UG-SIGDOC\] X-Road: Signed Document Download and Verification Manual. Cybernetica AS. Document ID: [UG-SIGDOC](../Manuals/ug-sigdoc_x-road_signed_document_download_and_verification_manual_1.4.1_Y-883-21.docx).
+19. <a id="Ref_UG-SIGDOC" class="anchor"></a>\[UG-SIGDOC\] X-Road: Signed Document Download and Verification Manual. Cybernetica AS. Document ID: [UG-SIGDOC](../Manuals/ug-sigdoc_x-road_signed_document_download_and_verification_manual.md).
 
 20. <a id="Ref_WSDL" class="anchor"></a>\[WSDL\] Web Services Description Language (WSDL) 1.1, 2001.
 
@@ -157,6 +161,9 @@ See X-Road terms and abbreviations documentation \[[TA-TERMS](#Ref_TERMS)\].
 
 22. <a id="Ref_TERMS" class="anchor"></a>\[TA-TERMS\] X-Road Terms and Abbreviations. Document ID: [TA-TERMS](../terms_x-road_docs.md).
 
+23. <a id="Ref_OPENAPI" class="anchor"></a>\[OPENAPI\] OpenAPI Specification 3.0.0. 26th July 2017.
+
+24.  <a id="Ref_PR-REST" class="anchor"></a>\[PR-REST\] X-Road Message Protocol for REST. Document ID: [PR-REST](../Protocols/pr-rest_x-road_message_protocol_for_rest.md).
 
 ## 2 System Components
 
@@ -188,7 +195,7 @@ In addition to configuration distribution, the central server provides interface
 
 ### 2.2 Security Server
 
-The security server (see \[[ARC-SS](#Ref_ARC-SS)\] for details) mediates service calls and service responses between information systems. The security server encapsulates the security aspects of the X-Road infrastructure: managing keys for signing and authentication, sending messages over secure channel, creating the proof value for messages with digital signatures, time-stamping (see Section [3.8](#38-time-stamping-protocol)) and logging. For the service client and the service provider information system, the security server offers a SOAP-based protocol (see Section [3.1](#31-x-road-message-protocol)). This protocol is the same for both the client and the service provider, making the security server transparent to the applications.
+The security server (see \[[ARC-SS](#Ref_ARC-SS)\] for details) mediates service calls and service responses between information systems. The security server encapsulates the security aspects of the X-Road infrastructure: managing keys for signing and authentication, sending messages over secure channel, creating the proof value for messages with digital signatures, time-stamping (see Section [3.8](#38-time-stamping-protocol)) and logging. For the service client and the service provider information system, the security server offers a message protocol for SOAP and a message protocol for REST (see Section [3.1](#31-x-road-message-protocol)). The protocols are the same for both the client and the service provider, making the security server transparent to the applications.
 
 A single security server can host several organizations (multi-tenancy). The organization managing the security server is the server owner, the hosted organizations are security server clients.
 
@@ -203,9 +210,9 @@ The security server contains an optional monitoring component that keeps track o
 
 The information system (IS) uses and/or provides services via the X-Road.
 
-For the service client IS, the security server acts as an entry point to all the X-Road services (see Section [3.1](#31-x-road-message-protocol)). The client IS is responsible for implementing an user authentication and access control mechanism that complies with the requirements of the particular X-Road instance. The identity of the end user is made available to the service provider by including it in the SOAP message. The client can discover the X-Road members and available services by using the X-Road metadata protocol (see Section [3.4](#34-service-metadata-protocol)).
+For the service client IS, the security server acts as an entry point to all the X-Road services (see Section [3.1](#31-x-road-message-protocol)). The client IS is responsible for implementing an user authentication and access control mechanism that complies with the requirements of the particular X-Road instance. The identity of the end user is made available to the service provider by including it in the service request. The client can discover the X-Road members and available services by using the X-Road metadata protocol (see Section [3.4](#34-service-metadata-protocol)).
 
-The service provider information system implements a SOAP service and makes it available over the X-Road. For this purpose, the service must conform to the X-Road message protocol (see Section [3.1](#31-x-road-message-protocol)). The service must be accompanied by the service description implemented in the WSDL language.
+The service provider information system implements a SOAP or a REST service and makes it available over the X-Road. For this purpose, the service must conform to the X-Road message protocol for SOAP or message protocol for REST (see Section [3.1](#31-x-road-message-protocol)). A SOAP service must be accompanied by a WSDL service description, and a REST service may be accompanied by an OpenAPI Specification v3.
 
 
 ### 2.4 Time-Stamping Authority
@@ -232,6 +239,11 @@ The configuration proxy (see \[[ARC-CP](#Ref_ARC-CP)\] for details) implements b
 The main functionality of the operational monitoring daemon (see \[[ARC-OPMOND](#Ref_ARC-OPMOND)\] for details) is to collect and store operational data of the X-Road security server and make it available for external monitoring systems via corresponding interfaces.
 
 
+### 2.8 Environmental Monitoring Daemon
+
+The environmental monitoring daemon (see \[[ARC-ENVMON](#Ref_ARC-ENVMON)\] for details) gathers information about the security server's operating environment and makes it available for external monitoring systems via corresponding interfaces.
+
+
 ## 3 Protocols and Interfaces
 
 
@@ -241,9 +253,9 @@ X-Road Message Protocol is used by service client and service provider informati
 
 The protocol is a synchronous RPC style protocol that is initiated by the client IS or by the service provider's security server.
 
-The X-Road Message Protocol is based on SOAP over HTTP(S) and adds additional header fields for identifying the service client and the invoked service. See \[[PR-MESS](#Ref_PR-MESS)\] for technical details.
+X-Road provides a message protocol for SOAP and a message protocol for REST. The X-Road Message Protocols are based on SOAP/REST over HTTP(S) and adds additional header fields for identifying the service client and the invoked service. See \[[PR-MESS](#Ref_PR-MESS)\] and \[[PR-REST](#Ref_PR-REST)\] for technical details.
 
-This protocol (together with the Message Transport Protocol) forms the core of the X-Road data exchange. If the involved components are not available, then the data exchange is not possible. X-Road architecture makes possible to improve the availability of the involved components by using redundancy.
+These protocols (together with the Message Transport Protocol) form the core of the X-Road data exchange. If the involved components are not available, then the data exchange is not possible. X-Road architecture makes possible to improve the availability of the involved components by using redundancy.
 
 
 ### 3.2 Protocol for Downloading Configuration
@@ -263,7 +275,7 @@ The X-Road Message Transport Protocol is used by security server to exchange ser
 
 The protocol is a synchronous RPC style protocol that is initiated by the security server of the service client.
 
-The protocol is based on HTTPS and uses mutual certificate-based TLS authentication. The SOAP messages received from the client and the service provider IS are wrapped in MIME multipart message together with additional security-related data, such as signatures and OCSP responses. See \[[PR-MESSTRANSP](#Ref_PR-MESSTRANSP)\] for details.
+The protocol is based on HTTPS and uses mutual certificate-based TLS authentication. The SOAP/REST messages received from the client and the service provider IS are wrapped in MIME multipart message together with additional security-related data, such as signatures and OCSP responses. See \[[PR-MESSTRANSP](#Ref_PR-MESSTRANSP)\] for details.
 
 This protocol (together with X-Road message protocol) forms the core of the X-Road data exchange. If the involved components are not available, then the data exchange is impossible. X-Road architecture makes possible to improve the availability of the involved components by using redundancy.
 
@@ -363,6 +375,11 @@ The environmental monitoring interface responds to queries for monitoring enviro
 ### 3.16 Environmental Monitoring JMX
 
 The environmental monitoring JMX service publishes environmental monitoring data via JMX interface. The environmental monitoring data is collected by environmental monitoring service.
+
+
+### 3.17 Environmental Monitoring Query
+
+The environmental monitoring query interface is used by the X-Road security server to retrieve environmental monitoring data from the environmental monitoring daemon.
 
 
 ## 4 Deployment View

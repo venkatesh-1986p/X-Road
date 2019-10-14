@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,6 +41,8 @@ import static ee.ria.xroad.common.ErrorCodes.X_UNKNOWN_MEMBER;
  */
 public final class ImportCertUtil {
 
+    private static final String DUMMY_MEMBER = "dummy";
+
     private ImportCertUtil() {
     }
 
@@ -66,9 +70,9 @@ public final class ImportCertUtil {
         try {
             return GlobalConf.getSubjectName(
                     new SignCertificateProfileInfoParameters(
-                            ClientId.create(instanceIdentifier, "dummy",
-                                    "dummy"),
-                            "dummy"), cert);
+                            ClientId.create(instanceIdentifier, DUMMY_MEMBER,
+                                    DUMMY_MEMBER),
+                            DUMMY_MEMBER), cert);
         } catch (Exception e) {
             throw CodedException.tr(X_CERT_IMPORT_FAILED, e,
                     "cert_import_failed", "%s",

@@ -6,14 +6,17 @@
 
 **Technical Specification**
 
-Version: 0.4  
+Version: 0.5  
 Doc. ID: PR-OPMON
 
-| Date       | Version     | Description                                                                  | Author             |
-|------------|-------------|------------------------------------------------------------------------------|--------------------|
-|  | 0.2       | Initial version               |          |
-| 23.01.2017 | 0.3       | Added license text, table of contents and version history | Sami Kallio |
-| 05.03.2018 | 0.4       | Added terms and abbreviations reference | Tatu Repo
+| Date | Version | Description | Author|
+|------|---------|-------------|-------|
+|            | 0.2 | Initial version |   |
+| 23.01.2017 | 0.3 | Added license text, table of contents and version history | Sami Kallio |
+| 05.03.2018 | 0.4 | Added terms and abbreviations reference | Tatu Repo |
+| 04.12.2018 | 0.5 | More detailed descriptions for *[request/response][In/Out]Ts* fields | Cybernetica AS |
+| 18.02.2019 | 0.6 | Example response updated: added xRequestId | Caro Hautamäki |
+| 23.05.2019 | 0.7 | Add info about status_code, request_rest_size, response_rest_size | Tapio Jaakkola |
 
 ## Table of Contents
 
@@ -119,6 +122,10 @@ The body of the request MUST contain an XML element *getSecurityServerOperationa
  * *succeeded*
  * *soapFaultCode*
  * *soapFaultString*
+ * *requestRestSize*
+ * *responseRestSize*
+ * *statusCode*
+ 
 
 The fields are described in the JSON-schema of the response payload \[[Annex B](#AnnexB)\].
 
@@ -979,7 +986,9 @@ properties:
             milliseconds when the request was received by the client''s security
             server. In the service provider''s security server: the Unix
             timestamp in milliseconds when the request was received by the
-            service provider''s security server.'
+            service provider''s security server. In both cases, the timestamp is
+            taken just before received payload byte array is decoded and
+            processed'
           type: integer
           minimum: 0
         requestOutTs:
@@ -988,7 +997,8 @@ properties:
             security server to the client''s information system. In the service
             provider''s security server: the Unix timestamp in milliseconds when
             the request was sent out from the service provider''s security
-            server.'
+            server. In both cases, the timestamp is taken just before payload
+            byte array is sent out with HTTP POST request'
           type: integer
           minimum: 0
         responseInTs:
@@ -996,7 +1006,9 @@ properties:
             milliseconds when the response was received by the client''s
             security server. In the service provider''s security server: the
             Unix timestamp in milliseconds when the response was received by the
-            service provider''s security server.'
+            service provider''s security server. In both cases, the timestamp is
+            taken just before received payload byte array is decoded and
+            processed.'
           type: integer
           minimum: 0
         responseOutTs:
@@ -1005,7 +1017,8 @@ properties:
             security server to the client''s information system. In the service
             provider''s security server: the Unix timestamp in milliseconds when
             the response was sent out from the service provider''s security
-            server.'
+            server. In both cases, the timestamp is taken just before payload
+            byte array is sent out with HTTP response'
           type: integer
           minimum: 0
         clientXRoadInstance:
@@ -1090,7 +1103,7 @@ properties:
           minimum: 0
         requestMimeSize:
           description: Size of the MIME-container of the request (sum of the
-              SOAP request message and attachments data size in bytes)
+            SOAP request message and attachments data size in bytes)
           type: integer
           minimum: 0
         requestAttachmentCount:
@@ -1103,7 +1116,7 @@ properties:
           minimum: 0
         responseMimeSize:
           description: Size of the MIME-container of the response (sum of the
-             SOAP response message and attachments data size in bytes)
+            SOAP response message and attachments data size in bytes)
           type: integer
           minimum: 0
         responseAttachmentCount:
@@ -1121,6 +1134,18 @@ properties:
           description: SOAP fault code in case SOAPFault received
           type: string
           maxLength: 255
+        requestRestSize:
+          description: Size of the request (bytes)
+          type: integer
+          minimum: 0
+        responseRestSize:
+          description: Size of the response (bytes)
+          type: integer
+          minimum: 0
+        statusCode:
+          description: Response HTTP status code
+          type: integer
+          minimum: 0
 required:
 - records
 ```
@@ -1264,7 +1289,8 @@ content-id: <operational-monitoring-data.json.gz>
       "serviceSubsystemCode": "subsystem1",
       "serviceVersion": "v1",
       "serviceXRoadInstance": "EE",
-      "succeeded": true
+      "succeeded": true,
+      "xRequestId": "fd83f20e-bc19-4eb4-9602-e37f94c09fbe"
     }
   ]
 }

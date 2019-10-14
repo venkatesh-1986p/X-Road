@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,17 +24,25 @@
  */
 package ee.ria.xroad.common.messagelog.archive;
 
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 
 /**
  * Digest with respective fileName.
  */
-@Data
+@Getter
+@EqualsAndHashCode
 public class DigestEntry {
     private Long id;
+    private String digest;
+    private String fileName;
 
-    private final String digest;
-    private final String fileName;
+    protected DigestEntry() { }
+
+    public DigestEntry(String digest, String fileName) {
+        this.digest = digest;
+        this.fileName = fileName;
+    }
 
     String toLinkingInfoEntry() {
         return String.format("%s %s", digest, fileName);

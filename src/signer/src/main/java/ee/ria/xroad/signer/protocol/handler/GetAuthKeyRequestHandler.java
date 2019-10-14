@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +36,6 @@ import ee.ria.xroad.signer.protocol.AbstractRequestHandler;
 import ee.ria.xroad.signer.protocol.dto.AuthKeyInfo;
 import ee.ria.xroad.signer.protocol.dto.CertificateInfo;
 import ee.ria.xroad.signer.protocol.dto.KeyInfo;
-import ee.ria.xroad.signer.protocol.dto.KeyUsageInfo;
 import ee.ria.xroad.signer.protocol.dto.TokenInfo;
 import ee.ria.xroad.signer.protocol.message.GetAuthKey;
 import ee.ria.xroad.signer.tokenmanager.TokenManager;
@@ -65,13 +66,7 @@ public class GetAuthKeyRequestHandler
         log.trace("Selecting authentication key for security server {}",
                 message.getSecurityServer());
 
-        if (!SoftwareTokenUtil.isTokenInitialized()) {
-            throw tokenNotInitialized(SoftwareTokenType.ID);
-        }
-
-        if (!TokenManager.isTokenActive(SoftwareTokenType.ID)) {
-            throw tokenNotActive(SoftwareTokenType.ID);
-        }
+        validateToken();
 
         for (TokenInfo tokenInfo : TokenManager.listTokens()) {
             if (!SoftwareModuleType.TYPE.equals(tokenInfo.getType())) {
@@ -80,7 +75,7 @@ public class GetAuthKeyRequestHandler
             }
 
             for (KeyInfo keyInfo : tokenInfo.getKeyInfo()) {
-                if (keyInfo.getUsage() != KeyUsageInfo.AUTHENTICATION) {
+                if (keyInfo.isForSigning()) {
                     log.trace("Ignoring {} key {}", keyInfo.getUsage(),
                             keyInfo.getId());
                     continue;
@@ -105,6 +100,16 @@ public class GetAuthKeyRequestHandler
                 "auth_key_not_found_for_server",
                 "Could not find active authentication key for "
                         + "security server '%s'", message.getSecurityServer());
+    }
+
+    private void validateToken() throws CodedException {
+        if (!SoftwareTokenUtil.isTokenInitialized()) {
+            throw tokenNotInitialized(SoftwareTokenType.ID);
+        }
+
+        if (!TokenManager.isTokenActive(SoftwareTokenType.ID)) {
+            throw tokenNotActive(SoftwareTokenType.ID);
+        }
     }
 
     private AuthKeyInfo authKeyResponse(KeyInfo keyInfo,

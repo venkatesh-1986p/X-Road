@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -53,9 +55,9 @@ import static ee.ria.xroad.proxy.conf.TestUtil.CLIENT_CODE;
 import static ee.ria.xroad.proxy.conf.TestUtil.MEMBER_CLASS;
 import static ee.ria.xroad.proxy.conf.TestUtil.MEMBER_CODE;
 import static ee.ria.xroad.proxy.conf.TestUtil.NUM_CLIENTS;
+import static ee.ria.xroad.proxy.conf.TestUtil.NUM_SERVICEDESCRIPTIONS;
 import static ee.ria.xroad.proxy.conf.TestUtil.NUM_SERVICES;
 import static ee.ria.xroad.proxy.conf.TestUtil.NUM_TSPS;
-import static ee.ria.xroad.proxy.conf.TestUtil.NUM_WSDLS;
 import static ee.ria.xroad.proxy.conf.TestUtil.SECURITY_CATEGORY;
 import static ee.ria.xroad.proxy.conf.TestUtil.SERVER_CODE;
 import static ee.ria.xroad.proxy.conf.TestUtil.SERVICE_CODE;
@@ -155,7 +157,7 @@ public class ServerConfTest {
         ClientId serviceProvider = createTestClientId(client(1));
 
         List<ServiceId> expectedServices = new ArrayList<>();
-        for (int i = 0; i < NUM_WSDLS; i++) {
+        for (int i = 0; i < NUM_SERVICEDESCRIPTIONS; i++) {
             for (int j = 0; j < NUM_SERVICES; j++) {
                 String version = j == NUM_SERVICES - 2 ? null : SERVICE_VERSION;
                 expectedServices.add(createTestServiceId(serviceProvider,
@@ -199,12 +201,12 @@ public class ServerConfTest {
     }
 
     /**
-     * Tests getting WSDL disabled notice.
+     * Tests getting service description disabled notice.
      */
     @Test
     public void getDisabledNotice() {
         ServiceId existingService = createTestServiceId(client(1),
-                service(NUM_WSDLS - 1, NUM_SERVICES - 1), SERVICE_VERSION);
+                service(NUM_SERVICEDESCRIPTIONS - 1, NUM_SERVICES - 1), SERVICE_VERSION);
         ServiceId nonExistingService = createTestServiceId("foo", "bar");
 
         assertNotNull(ServerConf.getDisabledNotice(existingService));
@@ -222,11 +224,27 @@ public class ServerConfTest {
                 service(1, 1), SERVICE_VERSION);
         ServiceId serviceX = createTestServiceId(client1.getMemberCode(),
                 SERVICE_CODE + "X", SERVICE_VERSION + "X");
+        ServiceId serviceRest = createTestServiceId(client1.getMemberCode(), "rest", null);
 
         assertTrue(ServerConf.isQueryAllowed(client1, service1));
+        assertTrue(ServerConf.isQueryAllowed(client1, service1, "POST", "/"));
         assertFalse(ServerConf.isQueryAllowed(clientX, service1));
         assertFalse(ServerConf.isQueryAllowed(clientX, serviceX));
         assertFalse(ServerConf.isQueryAllowed(client1, serviceX));
+
+        assertTrue(ServerConf.isQueryAllowed(client1, serviceRest, "GET", "/api/foo"));
+
+        assertTrue(ServerConf.isQueryAllowed(client1, serviceRest, "POST", "/api/test/foo"));
+        assertTrue(ServerConf.isQueryAllowed(client1, serviceRest, "POST", "/api/t%65st/foo"));
+        assertTrue(ServerConf.isQueryAllowed(client1, serviceRest, "POST", "/api/t%65st/foo%2dbar"));
+        assertTrue(ServerConf.isQueryAllowed(client1, serviceRest, "POST", "/api/test/foo/../bar"));
+
+        assertFalse(ServerConf.isQueryAllowed(client1, serviceRest, "POST", "/api/test%2Dbar"));
+        assertFalse(ServerConf.isQueryAllowed(client1, serviceRest, "POST", "/api/test/../bar"));
+        assertFalse(ServerConf.isQueryAllowed(client1, serviceRest, "GET", "/api/test/../../../api/test"));
+        assertFalse(ServerConf.isQueryAllowed(client1, serviceRest, "POST", "/api/test/foo/bar"));
+        assertFalse(ServerConf.isQueryAllowed(client1, serviceRest, "DELETE", "/api/test"));
+        assertFalse(ServerConf.isQueryAllowed(client1, serviceRest));
     }
 
     /**
@@ -330,7 +348,7 @@ public class ServerConfTest {
         ClientId serviceProvider = createTestClientId(client(1), null);
 
         List<ServiceId> allServices = getServices(serviceProvider);
-        assertEquals(NUM_WSDLS * NUM_SERVICES, allServices.size());
+        assertEquals(NUM_SERVICEDESCRIPTIONS * NUM_SERVICES, allServices.size());
 
         serviceProvider = createTestClientId(client(NUM_CLIENTS - 1), null);
 
@@ -341,7 +359,7 @@ public class ServerConfTest {
                 SUBSYSTEM);
 
         allServices = getServices(serviceProvider);
-        assertEquals(NUM_WSDLS * NUM_SERVICES, allServices.size());
+        assertEquals(NUM_SERVICEDESCRIPTIONS * NUM_SERVICES, allServices.size());
     }
 
     private static List<ServiceId> getServices(ClientId serviceProvider) {

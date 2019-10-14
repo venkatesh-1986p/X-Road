@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -49,11 +51,8 @@ public class IdleConnectionMonitorThread extends Thread {
     @Setter
     private int connectionIdleTimeMilliseconds = DEFAULT_IDLE_TIMEOUT;
 
-
     void closeNow() {
-        connectionManager.closeExpiredConnections();
-        connectionManager.closeIdleConnections(connectionIdleTimeMilliseconds,
-                TimeUnit.MILLISECONDS);
+        connectionManager.closeIdleConnections(connectionIdleTimeMilliseconds, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -63,7 +62,7 @@ public class IdleConnectionMonitorThread extends Thread {
                 sleep(intervalMilliseconds);
                 closeNow();
             } catch (InterruptedException ex) {
-                log.warn("InterruptedException occurred: {}", ex);
+                //ignored (stopping controlled by shutdown)
             }
         }
     }

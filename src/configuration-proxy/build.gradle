@@ -1,19 +1,25 @@
 plugins {
-  id 'com.github.johnrengelman.shadow' version '2.0.1'
+  id 'com.github.johnrengelman.shadow' version '4.0.4'
 }
-
-apply plugin: 'application'
 
 dependencies {
     compile project(':common-util')
     compile project(':signer-protocol')
 
-    compile 'commons-cli:commons-cli:1.2'
+    compile 'commons-cli:commons-cli:1.4'
 
     testCompile project(':common-test')
 }
 
-mainClassName = 'ee.ria.xroad.confproxy.ConfProxyMain'
+ext {
+  mainClassName = 'ee.ria.xroad.confproxy.ConfProxyMain'
+}
+
+jar {
+  manifest {
+    attributes  'Main-Class': mainClassName
+  }
+}
 
 shadowJar {
     classifier = ''

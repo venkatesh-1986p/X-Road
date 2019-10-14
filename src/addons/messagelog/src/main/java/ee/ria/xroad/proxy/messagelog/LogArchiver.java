@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,11 +41,11 @@ import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.NullOutputStream;
-import org.hibernate.Criteria;
 import org.hibernate.Session;
-import org.hibernate.criterion.Order;
-import org.hibernate.criterion.Projections;
-import org.hibernate.criterion.Restrictions;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -67,7 +69,8 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 public class LogArchiver extends UntypedActor {
 
     private static final int MAX_RECORDS_IN_ARCHIVE = 10;
-    private static final int MAX_RECORDS_IN_PATCHS = 360;
+    private static final int MAX_RECORDS_IN_BATCH = 360;
+    private static final String PROPERTY_NAME_ARCHIVED = "archived";
 
     public static final String START_ARCHIVING = "doArchive";
 
@@ -76,14 +79,15 @@ public class LogArchiver extends UntypedActor {
     private boolean safeTransactionBatch;
 
     @Override
-    public void onReceive(Object message) throws Exception {
+    public void onReceive(Object message) {
         log.trace("onReceive({})", message);
 
         if (START_ARCHIVING.equals(message)) {
             try {
                 Long maxTimestampId = doInTransaction(session -> getMaxTimestampId(session));
                 if (maxTimestampId != null) {
-                    while (handleArchive(maxTimestampId)) { }
+                    while (handleArchive(maxTimestampId)) {
+                    }
                 }
             } catch (Exception ex) {
                 log.error("Failed to archive log records", ex);
@@ -108,8 +112,9 @@ public class LogArchiver extends UntypedActor {
 
             try (LogArchiveWriter archiveWriter = createLogArchiveWriter(session)) {
                 while (!records.isEmpty()) {
-                    archive(archiveWriter, records);
-                    runTransferCommand(getArchiveTransferCommand());
+                    if (archive(archiveWriter, records)) {
+                        runTransferCommand(getArchiveTransferCommand());
+                    }
                     recordsArchived += records.size();
 
                     //flush changes (records marked as archived) and free memory
@@ -128,6 +133,8 @@ public class LogArchiver extends UntypedActor {
                 }
             } catch (Exception e) {
                 throw new CodedException(ErrorCodes.X_INTERNAL_ERROR, e);
+            } finally {
+                runTransferCommand(getArchiveTransferCommand());
             }
 
             log.info("Archived {} log records in {} ms", recordsArchived,
@@ -137,30 +144,31 @@ public class LogArchiver extends UntypedActor {
         });
     }
 
-    private void archive(LogArchiveWriter archiveWriter,
-            List<LogRecord> records) throws Exception {
+    private boolean archive(LogArchiveWriter archiveWriter, List<LogRecord> records) throws Exception {
+
+        boolean producedArchiveFile = false;
         for (LogRecord record : records) {
-            archiveWriter.write(record);
+            producedArchiveFile |= archiveWriter.write(record);
         }
+
+        return producedArchiveFile;
     }
 
     private LogArchiveWriter createLogArchiveWriter(Session session) {
         return new LogArchiveWriter(
-            getArchivePath(),
-            getWorkingPath(),
-            this.new HibernateLogArchiveBase(session)
+                getArchivePath(),
+                getWorkingPath(),
+                this.new HibernateLogArchiveBase(session)
         );
     }
 
     private Path getArchivePath() {
         if (!Files.isDirectory(archivePath)) {
-            throw new RuntimeException(
-                    "Log output path (" + archivePath + ") must be directory");
+            throw new RuntimeException("Log output path (" + archivePath + ") must be directory");
         }
 
         if (!Files.isWritable(archivePath)) {
-            throw new RuntimeException(
-                    "Log output path (" + archivePath + ") must be writable");
+            throw new RuntimeException("Log output path (" + archivePath + ") must be writable");
         }
 
         return archivePath;
@@ -168,35 +176,31 @@ public class LogArchiver extends UntypedActor {
 
     private Path getWorkingPath() {
         if (!Files.isDirectory(workingPath)) {
-            throw new RuntimeException(
-                    "Log working path (" + workingPath + ") must be directory");
+            throw new RuntimeException("Log working path (" + workingPath + ") must be directory");
         }
 
         if (!Files.isWritable(workingPath)) {
-            throw new RuntimeException(
-                    "Log working path (" + workingPath + ") must be writable");
+            throw new RuntimeException("Log working path (" + workingPath + ") must be writable");
         }
 
         return workingPath;
     }
 
     protected List<LogRecord> getRecordsToBeArchived(Session session, long maxTimestampId) {
+        /* Implementation note. Log cleaning assumes that the records are archived starting from the oldest
+          (smallest id). If this is changed, log cleaning must be changed accordingly. */
+
         List<LogRecord> recordsToArchive = new ArrayList<>();
         safeTransactionBatch = false;
         int allowedInArchiveCount = MAX_RECORDS_IN_ARCHIVE;
-        for (TimestampRecord ts : getNonArchivedTimestampRecords(session, MAX_RECORDS_IN_PATCHS, maxTimestampId)) {
-            List<MessageRecord> messages =
-                    getNonArchivedMessageRecords(session, ts.getId(),
-                            allowedInArchiveCount);
+        for (TimestampRecord ts : getNonArchivedTimestampRecords(session, MAX_RECORDS_IN_BATCH, maxTimestampId)) {
+            List<MessageRecord> messages = getNonArchivedMessageRecords(session, ts.getId(), allowedInArchiveCount);
             if (allTimestampMessagesArchived(session, ts.getId())) {
-                log.trace("Timestamp record #{} will be archived",
-                        ts.getId());
+                log.trace("Timestamp record #{} will be archived", ts.getId());
                 recordsToArchive.add(ts);
                 safeTransactionBatch = true;
             } else {
-                log.trace("Timestamp record #{} still related to"
-                                + " non-archived message records",
-                        ts.getId());
+                log.trace("Timestamp record #{} still related to non-archived message records", ts.getId());
             }
 
             recordsToArchive.addAll(messages);
@@ -208,60 +212,61 @@ public class LogArchiver extends UntypedActor {
         return recordsToArchive;
     }
 
-    @SuppressWarnings("unchecked")
-    protected List<TimestampRecord> getNonArchivedTimestampRecords(
-            Session session, int maxRecordsToGet, long maxTimestampId) {
-        Criteria criteria = session.createCriteria(TimestampRecord.class);
-        criteria.add(Restrictions.eq("archived", false));
-        criteria.add(Restrictions.le("id", maxTimestampId));
-        criteria.setMaxResults(maxRecordsToGet);
-        criteria.addOrder(Order.asc("id"));
-        return criteria.list();
+    protected List<TimestampRecord> getNonArchivedTimestampRecords(Session session, int maxRecordsToGet,
+            long maxTimestampId) {
+
+        final CriteriaBuilder cb = session.getCriteriaBuilder();
+        final CriteriaQuery<TimestampRecord> query = cb.createQuery(TimestampRecord.class);
+        final Root<TimestampRecord> t = query.from(TimestampRecord.class);
+
+        query.select(t).where(cb.and(
+                cb.isFalse(t.get(PROPERTY_NAME_ARCHIVED))),
+                cb.le(t.get("id"), maxTimestampId)).orderBy(cb.asc(t.get("id")));
+
+        return session.createQuery(query).setMaxResults(maxRecordsToGet).getResultList();
     }
 
-    @SuppressWarnings("unchecked")
     protected Long getMaxTimestampId(Session session) {
-        return (Long) session
-                .createCriteria(TimestampRecord.class)
-                .add(Restrictions.eq("archived", false))
-                .setProjection(Projections.max("id"))
-                .uniqueResult();
+        final CriteriaBuilder cb = session.getCriteriaBuilder();
+        final CriteriaQuery<Long> query = cb.createQuery(Long.class);
+        final Root<TimestampRecord> t = query.from(TimestampRecord.class);
+
+        query.select(cb.max(t.get("id"))).where(cb.isFalse(t.get(PROPERTY_NAME_ARCHIVED)));
+        return session.createQuery(query).uniqueResult();
     }
 
-    @SuppressWarnings("unchecked")
-    protected List<MessageRecord> getNonArchivedMessageRecords(Session session,
-            Long timestampRecordNumber, int maxRecordsToGet) {
-        return session
-                .createCriteria(MessageRecord.class)
-                .add(Restrictions.eq("archived", false))
-                .add(Restrictions.eq("timestampRecord.id",
-                        timestampRecordNumber))
-                .setMaxResults(maxRecordsToGet)
-                .list();
+    protected List<MessageRecord> getNonArchivedMessageRecords(Session session, Long timestampRecordNumber,
+            int maxRecordsToGet) {
+        final CriteriaBuilder cb = session.getCriteriaBuilder();
+        final CriteriaQuery<MessageRecord> query = cb.createQuery(MessageRecord.class);
+        final Root<MessageRecord> m = query.from(MessageRecord.class);
+
+        query.select(m).where(cb.and(
+                cb.isFalse(m.get(PROPERTY_NAME_ARCHIVED)),
+                cb.equal(m.get("timestampRecord").get("id"), timestampRecordNumber)
+        ));
+
+        return session.createQuery(query).setMaxResults(maxRecordsToGet).getResultList();
     }
 
-    protected boolean allTimestampMessagesArchived(Session session,
-            Long timestampRecordNumber) {
-        Long result = (Long) session
-                .createCriteria(MessageRecord.class)
-                .add(Restrictions.eq("archived", false))
-                .add(Restrictions.eq("timestampRecord.id",
-                        timestampRecordNumber))
-                .setProjection(Projections.rowCount())
-                .uniqueResult();
-        return result == 0;
+    protected boolean allTimestampMessagesArchived(Session session, Long timestampRecordNumber) {
+        final CriteriaBuilder cb = session.getCriteriaBuilder();
+        final CriteriaQuery<Long> query = cb.createQuery(Long.class);
+        final Root<MessageRecord> m = query.from(MessageRecord.class);
+
+        query.select(cb.count(m))
+                .where(cb.and(
+                        cb.equal(m.get(PROPERTY_NAME_ARCHIVED), false),
+                        cb.equal(m.get("timestampRecord").get("id"), timestampRecordNumber)));
+
+        return session.createQuery(query).getSingleResult() == 0;
     }
 
     protected void markArchiveCreated(final DigestEntry lastArchive,
             final Session session) throws Exception {
         if (lastArchive != null) {
             log.debug("Digest entry will be saved here...");
-
-            session.createQuery(
-                    "delete from " + DigestEntry.class.getName()
-                )
-                .executeUpdate();
-
+            session.createQuery("delete from " + DigestEntry.class.getName()).executeUpdate();
             session.save(lastArchive);
         }
     }
@@ -271,8 +276,7 @@ public class LogArchiver extends UntypedActor {
             return;
         }
 
-        log.info("Transferring archives with shell command: \t{}",
-                transferCommand);
+        log.info("Transferring archives with shell command: \t{}", transferCommand);
 
         try {
             String[] command = new String[] {"/bin/bash", "-c", transferCommand};
@@ -293,20 +297,18 @@ public class LogArchiver extends UntypedActor {
             if (exitCode != 0) {
                 String errorMsg = String.format(
                         "Running archive transfer command '%s' "
-                        + "exited with status '%d'",
+                                + "exited with status '%d'",
                         transferCommand,
                         exitCode);
 
                 log.error(
                         "{}\n -- STANDARD ERROR START\n{}\n"
-                        + " -- STANDARD ERROR END",
+                                + " -- STANDARD ERROR END",
                         errorMsg,
                         standardErrorCollector.getStandardError());
             }
         } catch (Exception e) {
-            log.error(
-                    "Failed to execute archive transfer command '{}'",
-                    transferCommand, e);
+            log.error("Failed to execute archive transfer command '{}'", transferCommand, e);
         }
     }
 
@@ -322,7 +324,7 @@ public class LogArchiver extends UntypedActor {
         }
 
         @Override
-        public void markRecordArchived(LogRecord logRecord) throws Exception {
+        public void markRecordArchived(LogRecord logRecord) {
             log.trace("Setting {} #{} archived",
                     logRecord.getClass().getName(), logRecord.getId());
 
@@ -331,16 +333,15 @@ public class LogArchiver extends UntypedActor {
         }
 
         @Override
-        @SuppressWarnings("unchecked")
-        public DigestEntry loadLastArchive() throws Exception {
+        public DigestEntry loadLastArchive() {
             List<DigestEntry> lastArchiveEntries =
                     session
-                        .createQuery(
-                                "select new " + DigestEntry.class.getName()
-                                + "(d.digest, d.fileName) from DigestEntry d"
-                        )
-                        .setMaxResults(1)
-                        .list();
+                            .createQuery(
+                                    "select new " + DigestEntry.class.getName()
+                                            + "(d.digest, d.fileName) from DigestEntry d", DigestEntry.class
+                            )
+                            .setMaxResults(1)
+                            .list();
 
             return lastArchiveEntries.isEmpty()
                     ? DigestEntry.empty() : lastArchiveEntries.get(0);

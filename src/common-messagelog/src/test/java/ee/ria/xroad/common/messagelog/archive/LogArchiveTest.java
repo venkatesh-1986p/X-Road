@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,13 +31,12 @@ import ee.ria.xroad.common.messagelog.MessageLogProperties;
 import ee.ria.xroad.common.messagelog.MessageRecord;
 import ee.ria.xroad.common.messagelog.TimestampRecord;
 
+import org.apache.commons.io.FileUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.nio.channels.Channels;
-import java.nio.channels.WritableByteChannel;
 import java.nio.file.Paths;
 
 import static org.junit.Assert.assertTrue;
@@ -47,12 +48,9 @@ import static org.junit.Assert.assertTrue;
 public class LogArchiveTest {
 
     private static final int NUM_TIMESTAMPS = 3;
-    private static final int NUM_RECORDS_PER_TIMESTAMP = 25;
+    private static final int NUM_RECORDS_PER_TIMESTAMP = 5;
 
     private static boolean rotated;
-
-    private ByteArrayOutputStream archiveTestOut;
-
     private long recordNo;
 
     @Rule
@@ -65,10 +63,13 @@ public class LogArchiveTest {
      */
     @Before
     public void beforeTest() throws Exception {
-        archiveTestOut = new ByteArrayOutputStream();
         recordNo = 0;
-
         rotated = false;
+    }
+
+    @After
+    public void afterTest() {
+        FileUtils.deleteQuietly(Paths.get("build/slog").toFile());
     }
 
     // ------------------------------------------------------------------------
@@ -82,22 +83,35 @@ public class LogArchiveTest {
     public void writeAndRotate() throws Exception {
         System.setProperty(MessageLogProperties.ARCHIVE_MAX_FILESIZE, "50");
 
-        writeRecordsToLog();
+        writeRecordsToLog(false);
+        assertTrue(rotated);
+    }
+
+    /**
+     * Writes records, simulates a situation where archving is finished just after rotate.
+     * (XRDDEV-85)
+     */
+    @Test
+    public void testFinishAfterRotate() throws Exception {
+        System.setProperty(MessageLogProperties.ARCHIVE_MAX_FILESIZE, "3000");
+        writeRecordsToLog(true);
         assertTrue(rotated);
     }
 
     // ------------------------------------------------------------------------
 
-    private void writeRecordsToLog() throws Exception {
+    private void writeRecordsToLog(boolean finishAfterRotate) throws Exception {
         try (LogArchiveWriter writer = getWriter()) {
-            for (int i = 0; i < NUM_TIMESTAMPS; i++) {
+            outer: for (int i = 0; i < NUM_TIMESTAMPS; i++) {
                 TimestampRecord ts = nextTimestampRecord();
                 for (int j = 0; j < NUM_RECORDS_PER_TIMESTAMP; j++) {
                     MessageRecord messageRecord = nextMessageRecord();
                     messageRecord.setTimestampRecord(ts);
                     messageRecord.setTimestampHashChain("foo");
 
-                    writer.write(messageRecord);
+                    if (writer.write(messageRecord) && finishAfterRotate) {
+                        break outer;
+                    }
                 }
             }
         }
@@ -108,13 +122,10 @@ public class LogArchiveTest {
                 Paths.get("build/slog"),
                 Paths.get("build/tmp"),
                 dummyLogArchiveBase()) {
-            @Override
-            protected WritableByteChannel createArchiveOutput()
-                    throws Exception {
-                return Channels.newChannel(archiveTestOut);
-            }
+
             @Override
             protected void rotate() throws Exception {
+                super.rotate();
                 rotated = true;
             }
         };
@@ -146,7 +157,8 @@ public class LogArchiveTest {
 
         MessageRecord record = new MessageRecord("qid" + recordNo,
                 "msg" + recordNo, "sig" + recordNo, false,
-                ClientId.create("memberClass", "memberCode", "subsystemCode"));
+                ClientId.create("memberClass", "memberCode", "subsystemCode"),
+                "92060130-3ba8-4e35-89e2-41b90aac074b");
         record.setId(recordNo);
         record.setTime((long) (Math.random() * 100000L));
 

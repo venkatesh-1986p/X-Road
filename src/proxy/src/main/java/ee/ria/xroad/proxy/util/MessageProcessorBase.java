@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,10 +27,12 @@ package ee.ria.xroad.proxy.util;
 import ee.ria.xroad.common.CodedException;
 import ee.ria.xroad.common.conf.globalconf.GlobalConf;
 import ee.ria.xroad.common.conf.serverconf.ServerConf;
+import ee.ria.xroad.common.message.RestRequest;
 import ee.ria.xroad.common.message.SoapMessageImpl;
 import ee.ria.xroad.common.monitoring.MessageInfo;
 import ee.ria.xroad.common.opmonitoring.OpMonitoringData;
 import ee.ria.xroad.common.util.HttpSender;
+import ee.ria.xroad.common.util.MimeUtils;
 import ee.ria.xroad.proxy.conf.KeyConf;
 
 import org.apache.http.client.HttpClient;
@@ -126,6 +130,28 @@ public abstract class MessageProcessorBase {
 
             opMonitoringData.setRequestSoapSize(soapMessage.getBytes().length);
         }
+    }
+
+    /**
+     * Update operational monitoring data with REST message header data
+     *
+     */
+    protected void updateOpMonitoringDataByRestRequest(OpMonitoringData opMonitoringData, RestRequest request) {
+        if (opMonitoringData != null && request != null) {
+            opMonitoringData.setClientId(request.getSender());
+            opMonitoringData.setServiceId(request.getServiceId());
+            opMonitoringData.setMessageId(request.getQueryId());
+            opMonitoringData.setMessageUserId(request.findHeaderValueByName(MimeUtils.HEADER_USER_ID));
+            opMonitoringData.setMessageIssue(request.findHeaderValueByName(MimeUtils.HEADER_ISSUE));
+            opMonitoringData.setMessageProtocolVersion(String.valueOf(request.getVersion()));
+        }
+    }
+
+    /**
+     * Check that message transfer was successful.
+     */
+    public boolean verifyMessageExchangeSucceeded() {
+        return true;
     }
 
     protected static String getSecurityServerAddress() {

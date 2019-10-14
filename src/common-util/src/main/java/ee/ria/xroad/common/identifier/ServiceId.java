@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +23,8 @@
  * THE SOFTWARE.
  */
 package ee.ria.xroad.common.identifier;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
@@ -103,13 +107,14 @@ public class ServiceId extends XRoadId {
      * Returns the provider client ID of this service.
      * @return ClientId
      */
+    @JsonIgnore
     public ClientId getClientId() {
         return ClientId.create(getXRoadInstance(),
                 memberClass, memberCode, subsystemCode);
     }
 
     @Override
-    protected String[] getFieldsForStringFormat() {
+    public String[] getFieldsForStringFormat() {
         return new String[] {
                 memberClass, memberCode, subsystemCode, serviceCode,
                 serviceVersion };

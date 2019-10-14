@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,16 +25,11 @@
 package ee.ria.xroad.proxy.clientproxy;
 
 import ee.ria.xroad.common.CodedException;
-import ee.ria.xroad.common.SystemProperties;
 import ee.ria.xroad.common.cert.CertChain;
 import ee.ria.xroad.common.conf.globalconf.GlobalConf;
-import ee.ria.xroad.common.conf.serverconf.IsAuthentication;
 import ee.ria.xroad.common.conf.serverconf.IsAuthenticationData;
-import ee.ria.xroad.common.conf.serverconf.ServerConf;
-import ee.ria.xroad.common.conf.serverconf.model.ClientType;
 import ee.ria.xroad.common.identifier.CentralServiceId;
 import ee.ria.xroad.common.identifier.ClientId;
-import ee.ria.xroad.common.identifier.SecurityServerId;
 import ee.ria.xroad.common.identifier.ServiceId;
 import ee.ria.xroad.common.message.RequestHash;
 import ee.ria.xroad.common.message.SaxSoapParserImpl;
@@ -48,20 +45,16 @@ import ee.ria.xroad.common.monitoring.MonitorAgent;
 import ee.ria.xroad.common.opmonitoring.OpMonitoringData;
 import ee.ria.xroad.common.util.HttpSender;
 import ee.ria.xroad.common.util.MimeUtils;
-import ee.ria.xroad.proxy.ProxyMain;
 import ee.ria.xroad.proxy.conf.KeyConf;
 import ee.ria.xroad.proxy.messagelog.MessageLog;
 import ee.ria.xroad.proxy.protocol.ProxyMessage;
 import ee.ria.xroad.proxy.protocol.ProxyMessageDecoder;
 import ee.ria.xroad.proxy.protocol.ProxyMessageEncoder;
-import ee.ria.xroad.proxy.util.MessageProcessorBase;
 
-import lombok.EqualsAndHashCode;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.protocol.HttpClientContext;
 import org.bouncycastle.cert.ocsp.OCSPResp;
 import org.bouncycastle.util.Arrays;
 import org.xml.sax.Attributes;
@@ -76,13 +69,10 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.Writer;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -92,26 +82,22 @@ import java.util.concurrent.TimeUnit;
 
 import static ee.ria.xroad.common.ErrorCodes.X_INCONSISTENT_RESPONSE;
 import static ee.ria.xroad.common.ErrorCodes.X_INTERNAL_ERROR;
-import static ee.ria.xroad.common.ErrorCodes.X_INVALID_SECURITY_SERVER;
 import static ee.ria.xroad.common.ErrorCodes.X_MISSING_SIGNATURE;
 import static ee.ria.xroad.common.ErrorCodes.X_MISSING_SOAP;
 import static ee.ria.xroad.common.ErrorCodes.X_SERVICE_FAILED_X;
-import static ee.ria.xroad.common.ErrorCodes.X_UNKNOWN_MEMBER;
 import static ee.ria.xroad.common.ErrorCodes.translateException;
 import static ee.ria.xroad.common.SystemProperties.getServerProxyPort;
 import static ee.ria.xroad.common.SystemProperties.isSslEnabled;
 import static ee.ria.xroad.common.util.AbstractHttpSender.CHUNKED_LENGTH;
 import static ee.ria.xroad.common.util.CryptoUtils.decodeBase64;
 import static ee.ria.xroad.common.util.CryptoUtils.encodeBase64;
-import static ee.ria.xroad.common.util.MimeUtils.HEADER_HASH_ALGO_ID;
 import static ee.ria.xroad.common.util.MimeUtils.HEADER_ORIGINAL_CONTENT_TYPE;
 import static ee.ria.xroad.common.util.MimeUtils.HEADER_ORIGINAL_SOAP_ACTION;
-import static ee.ria.xroad.common.util.MimeUtils.HEADER_PROXY_VERSION;
+import static ee.ria.xroad.common.util.MimeUtils.HEADER_REQUEST_ID;
 import static ee.ria.xroad.common.util.TimeUtils.getEpochMillisecond;
-import static ee.ria.xroad.proxy.clientproxy.FastestConnectionSelectingSSLSocketFactory.ID_TARGETS;
 
 @Slf4j
-class ClientMessageProcessor extends MessageProcessorBase {
+class ClientMessageProcessor extends AbstractClientMessageProcessor {
 
     /**
      * Timeout for waiting for the SOAP message to be read from the request.
@@ -134,11 +120,6 @@ class ClientMessageProcessor extends MessageProcessorBase {
      */
     private final CountDownLatch httpSenderGate = new CountDownLatch(1);
 
-    /**
-     * Holds the client side SSL certificate.
-     */
-    private final IsAuthenticationData clientCert;
-
     /** Holds the incoming request SOAP message. */
     private volatile String originalSoapAction;
     private volatile SoapMessageImpl requestSoap;
@@ -154,12 +135,10 @@ class ClientMessageProcessor extends MessageProcessorBase {
 
     /** Holds the request to the server proxy. */
     private ProxyMessageEncoder request;
+    private String xRequestId;
 
     /** Holds the response from server proxy. */
     private ProxyMessage response;
-
-    //** Holds operational monitoring data. */
-    private volatile OpMonitoringData opMonitoringData;
 
     private static final ExecutorService SOAP_HANDLER_EXECUTOR =
             createSoapHandlerExecutor();
@@ -179,35 +158,34 @@ class ClientMessageProcessor extends MessageProcessorBase {
     ClientMessageProcessor(HttpServletRequest servletRequest, HttpServletResponse servletResponse,
             HttpClient httpClient, IsAuthenticationData clientCert, OpMonitoringData opMonitoringData)
             throws Exception {
-        super(servletRequest, servletResponse, httpClient);
-
-        this.clientCert = clientCert;
-        this.opMonitoringData = opMonitoringData;
+        super(servletRequest, servletResponse, httpClient, clientCert, opMonitoringData);
         this.reqIns = new PipedInputStream();
         this.reqOuts = new PipedOutputStream(reqIns);
+        this.xRequestId = UUID.randomUUID().toString();
     }
 
     @Override
     public void process() throws Exception {
         log.trace("process()");
 
+        opMonitoringData.setXRequestId(xRequestId);
         updateOpMonitoringClientSecurityServerAddress();
 
         Future<?> soapHandler = SOAP_HANDLER_EXECUTOR.submit(this::handleSoap);
 
         try {
-            // Wait for the request SOAP message to be parsed before we can
-            // start sending stuff.
+            // Wait for the request SOAP message to be parsed before we can start sending stuff.
             waitForSoapMessage();
 
             // If the handler thread excepted, do not continue.
             checkError();
 
-            // Verify that the client is registered
-            verifyClientStatus();
+            // Verify that the client is registered.
+            ClientId client = requestSoap.getClient();
+            verifyClientStatus(client);
 
-            // Check client authentication mode
-            verifyClientAuthentication();
+            // Check client authentication mode.
+            verifyClientAuthentication(client);
 
             processRequest();
 
@@ -219,8 +197,7 @@ class ClientMessageProcessor extends MessageProcessorBase {
                 reqIns.close();
             }
 
-            // Let's interrupt the handler thread so that it won't
-            // block forever waiting for us to do something.
+            // Let's interrupt the handler thread so that it won't block forever waiting for us to do something.
             soapHandler.cancel(true);
 
             throw e;
@@ -229,6 +206,11 @@ class ClientMessageProcessor extends MessageProcessorBase {
                 response.consume();
             }
         }
+    }
+
+    @Override
+    public boolean verifyMessageExchangeSucceeded() {
+        return response != null && response.getFault() == null;
     }
 
     private void updateOpMonitoringClientSecurityServerAddress() {
@@ -262,49 +244,16 @@ class ClientMessageProcessor extends MessageProcessorBase {
         log.trace("sendRequest()");
 
         try {
-            // If we're using SSL, we need to include the provider name in
-            // the HTTP request so that server proxy could verify the SSL
-            // certificate properly.
-            if (isSslEnabled()) {
-                httpSender.setAttribute(AuthTrustVerifier.ID_PROVIDERNAME, requestServiceId);
-            }
-
-            // Start sending the request to server proxies. The underlying
-            // SSLConnectionSocketFactory will select the fastest address
-            // (socket that connects first) from the provided addresses.
-            List<URI> tmp = getServiceAddresses(requestServiceId, requestSoap.getSecurityServer());
-            Collections.shuffle(tmp);
-            URI[] addresses = tmp.toArray(new URI[0]);
-
-            updateOpMonitoringServiceSecurityServerAddress(addresses, httpSender);
-
-            httpSender.setAttribute(ID_TARGETS, addresses);
-
-            if (SystemProperties.isEnableClientProxyPooledConnectionReuse()) {
-                // set the servers with this subsystem as the user token, this will pool the connections per groups of
-                // security servers.
-                httpSender.setAttribute(HttpClientContext.USER_TOKEN, new TargetHostsUserToken(addresses));
-            }
-
-            httpSender.setConnectionTimeout(SystemProperties.getClientProxyTimeout());
-            httpSender.setSocketTimeout(SystemProperties.getClientProxyHttpClientTimeout());
-
-            httpSender.addHeader(HEADER_HASH_ALGO_ID, SoapUtils.getHashAlgoId());
-            httpSender.addHeader(HEADER_PROXY_VERSION, ProxyMain.getVersion());
-
-            // Preserve the original content type in the "x-original-content-type"
-            // HTTP header, which will be used to send the request to the
-            // service provider
-            httpSender.addHeader(HEADER_ORIGINAL_CONTENT_TYPE, servletRequest.getContentType());
-
+            URI[] addresses = prepareRequest(httpSender, requestServiceId, requestSoap.getSecurityServer());
             // Preserve the original SOAPAction header
             httpSender.addHeader(HEADER_ORIGINAL_SOAP_ACTION, originalSoapAction);
 
+            // Add unique id to distinguish request/response pairs
+            httpSender.addHeader(HEADER_REQUEST_ID, xRequestId);
+
             try {
                 opMonitoringData.setRequestOutTs(getEpochMillisecond());
-
-                httpSender.doPost(addresses[0], reqIns, CHUNKED_LENGTH, outputContentType);
-
+                httpSender.doPost(getServiceAddress(addresses), reqIns, CHUNKED_LENGTH, outputContentType);
                 opMonitoringData.setResponseInTs(getEpochMillisecond());
             } catch (Exception e) {
                 // Failed to connect to server proxy
@@ -320,28 +269,22 @@ class ClientMessageProcessor extends MessageProcessorBase {
         }
     }
 
-    @EqualsAndHashCode
-    public static class TargetHostsUserToken {
-        private final Set<URI> targetHosts;
-
-        TargetHostsUserToken(Set<URI> targetHosts) {
-            if (targetHosts != null) {
-                this.targetHosts = targetHosts;
-            } else {
-                this.targetHosts = new HashSet<>();
-            }
+    private static URI getServiceAddress(URI[] addresses) {
+        if (addresses.length == 1 || !isSslEnabled()) {
+            return addresses[0];
         }
+        //postpone actual name resolution to the fastest connection selector
+        return DUMMY_SERVICE_ADDRESS;
+    }
 
-        TargetHostsUserToken(URI[] uris) {
-            if (uris == null || uris.length == 0) {
-                this.targetHosts = Collections.emptySet();
-            } else {
-                if (uris.length == 1) {
-                    this.targetHosts = Collections.singleton(uris[0]);
-                } else {
-                    this.targetHosts = new HashSet<>(java.util.Arrays.asList(uris));
-                }
-            }
+    private static final URI DUMMY_SERVICE_ADDRESS;
+
+    static {
+        try {
+            DUMMY_SERVICE_ADDRESS = new URI("https", null, "localhost", getServerProxyPort(), "/", null, null);
+        } catch (URISyntaxException e) {
+            //can not happen
+            throw new IllegalStateException("Unexpected", e);
         }
     }
 
@@ -364,18 +307,6 @@ class ClientMessageProcessor extends MessageProcessorBase {
         checkResponse();
 
         decoder.verify(requestServiceId.getClientId(), response.getSignature());
-    }
-
-    private void updateOpMonitoringServiceSecurityServerAddress(URI addresses[], HttpSender httpSender) {
-        if (addresses.length == 1) {
-            opMonitoringData.setServiceSecurityServerAddress(addresses[0].getHost());
-        } else {
-            // In case multiple addresses the service security server
-            // address will be founded by received TLS authentication
-            // certificate in AuthTrustVerifier class.
-
-            httpSender.setAttribute(OpMonitoringData.class.getName(), opMonitoringData);
-        }
     }
 
     private void updateOpMonitoringDataByResponse(ProxyMessageDecoder decoder) {
@@ -448,11 +379,13 @@ class ClientMessageProcessor extends MessageProcessorBase {
     private void logResponseMessage() throws Exception {
         log.trace("logResponseMessage()");
 
-        MessageLog.log(response.getSoap(), response.getSignature(), true);
+        MessageLog.log(response.getSoap(), response.getSignature(), true, xRequestId);
     }
 
     private void sendResponse() throws Exception {
         log.trace("sendResponse()");
+
+        opMonitoringData.setResponseOutTs(getEpochMillisecond(), true);
 
         servletResponse.setStatus(HttpServletResponse.SC_OK);
         servletResponse.setCharacterEncoding(MimeUtils.UTF8);
@@ -525,67 +458,6 @@ class ClientMessageProcessor extends MessageProcessorBase {
 
         return new MessageInfo(Origin.CLIENT_PROXY, requestSoap.getClient(), requestServiceId, requestSoap.getUserId(),
                 requestSoap.getQueryId());
-    }
-
-    protected void verifyClientStatus() throws Exception {
-        ClientId client = requestSoap.getClient();
-        String status = ServerConf.getMemberStatus(client);
-
-        if (!ClientType.STATUS_REGISTERED.equals(status)) {
-            throw new CodedException(X_UNKNOWN_MEMBER, "Client '%s' not found", client);
-        }
-    }
-
-    protected void verifyClientAuthentication() throws Exception {
-        if (!SystemProperties.shouldVerifyClientCert()) {
-            return;
-        }
-
-        log.trace("verifyClientAuthentication()");
-
-        ClientId sender = requestSoap.getClient();
-        IsAuthentication.verifyClientAuthentication(sender, clientCert);
-    }
-
-    private static List<URI> getServiceAddresses(ServiceId serviceProvider, SecurityServerId serverId)
-            throws Exception {
-        log.trace("getServiceAddresses({}, {})", serviceProvider, serverId);
-
-        Collection<String> hostNames = GlobalConf.getProviderAddress(serviceProvider.getClientId());
-
-        if (hostNames == null || hostNames.isEmpty()) {
-            throw new CodedException(X_UNKNOWN_MEMBER, "Could not find addresses for service provider \"%s\"",
-                    serviceProvider);
-        }
-
-        if (serverId != null) {
-            final String securityServerAddress = GlobalConf.getSecurityServerAddress(serverId);
-
-            if (securityServerAddress == null) {
-                throw new CodedException(X_INVALID_SECURITY_SERVER, "Could not find security server \"%s\"", serverId);
-            }
-
-            if (!hostNames.contains(securityServerAddress)) {
-                throw new CodedException(X_INVALID_SECURITY_SERVER, "Invalid security server \"%s\"", serviceProvider);
-            }
-
-            hostNames = Collections.singleton(securityServerAddress);
-        }
-
-        String protocol = isSslEnabled() ? "https" : "http";
-        int port = getServerProxyPort();
-
-        List<URI> addresses = new ArrayList<>(hostNames.size());
-
-        for (String host : hostNames) {
-            addresses.add(new URI(protocol, null, host, port, "/", null, null));
-        }
-
-        return addresses;
-    }
-
-    private static String getHashAlgoId(HttpSender httpSender) {
-        return httpSender.getResponseHeaders().get(HEADER_HASH_ALGO_ID);
     }
 
     public void handleSoap() {
@@ -682,7 +554,7 @@ class ClientMessageProcessor extends MessageProcessorBase {
         private void logRequestMessage() throws Exception {
             log.trace("logRequestMessage()");
 
-            MessageLog.log(requestSoap, request.getSignature(), true);
+            MessageLog.log(requestSoap, request.getSignature(), true, xRequestId);
         }
 
         @Override

@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -67,7 +69,7 @@ import static java.util.Collections.unmodifiableList;
 @Slf4j
 public final class TokenManager {
 
-   private static volatile List<Token> currentTokens = new ArrayList<>();
+    private static volatile List<Token> currentTokens = new ArrayList<>();
 
     private static boolean initialized;
 
@@ -286,20 +288,19 @@ public final class TokenManager {
         List<KeyInfo> keyInfo = new ArrayList<>();
 
         for (Token token : currentTokens) {
-            if (!token.isActive() || !token.isAvailable()) {
+            if (token.isInActive()) {
                 // Ignore inactive (not usable) tokens
                 continue;
             }
 
             for (Key key : token.getKeys()) {
-                if (!key.isAvailable()
-                        || key.getUsage() == KeyUsageInfo.AUTHENTICATION) {
+                if (!key.isValidForSigning()) {
                     // Ignore authentication keys
                     continue;
                 }
 
                 for (Cert cert : key.getCerts()) {
-                    if (!cert.isActive() || cert.getMemberId() == null) {
+                    if (cert.isInvalid()) {
                         // Ignore inactive and invalid certificates
                         continue;
                     }

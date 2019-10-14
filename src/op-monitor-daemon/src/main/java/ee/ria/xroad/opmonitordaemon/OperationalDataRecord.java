@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2016 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -67,17 +69,19 @@ public class OperationalDataRecord {
     @JsonAdapter(SecurityServerTypeTypeAdapter.class)
     private String securityServerType;
 
-    SecurityServerType getSecurityServerType() {
+    public SecurityServerType getSecurityServerType() {
         return securityServerType == null
                 ? null : SecurityServerType.fromString(securityServerType);
     }
 
-    void setSecurityServerType(String serverType) {
+    /**
+     * set security server type
+     * @throws IllegalArgumentException if serverType is not valid
+     */
+    public void setSecurityServerType(String serverType) {
         if (SecurityServerType.fromString(serverType) == null) {
-            throw new IllegalArgumentException(
-                    "Invalid value of securityServerType");
+            throw new IllegalArgumentException("Invalid value of securityServerType");
         }
-
         securityServerType = serverType;
     }
 
@@ -183,6 +187,10 @@ public class OperationalDataRecord {
 
     @Getter
     @Setter
+    private Long requestRestSize;
+
+    @Getter
+    @Setter
     private Long requestMimeSize;
 
     @Getter
@@ -192,6 +200,10 @@ public class OperationalDataRecord {
     @Getter
     @Setter
     private Long responseSoapSize;
+
+    @Getter
+    @Setter
+    private Long responseRestSize;
 
     @Getter
     @Setter
@@ -212,5 +224,13 @@ public class OperationalDataRecord {
     @Getter
     @Setter
     private String soapFaultString;
+
+    @Getter
+    @Setter
+    private String xRequestId;
+
+    @Getter
+    @Setter
+    private Integer statusCode;
 
 }

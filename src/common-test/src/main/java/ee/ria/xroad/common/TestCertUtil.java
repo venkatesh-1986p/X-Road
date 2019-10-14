@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -45,6 +47,9 @@ public final class TestCertUtil {
 
     /** Hard coded path to all the certificates. */
     private static final String CERT_PATH = "/";
+
+    private static final String CERT_ERROR_MSG = "Unable to get certificate for name \"%1$s\" from keystore";
+    private static final String CERT_ERROR_WITH_PASSWD_MSG = CERT_ERROR_MSG + " using password \"%2$s\"";
 
     /** Lazily initialized cached instances of the certs. */
     private static volatile X509Certificate caCert;
@@ -191,8 +196,7 @@ public final class TestCertUtil {
             X509Certificate cert =
                     (X509Certificate) keyStore.getCertificate(orgName);
             if (cert == null) {
-                throw new RuntimeException("Unable to get certificate for "
-                        + "name \"" + orgName + "\" from keystore");
+                throw new RuntimeException(String.format(CERT_ERROR_MSG, orgName));
             }
 
             return cert;
@@ -211,8 +215,7 @@ public final class TestCertUtil {
         try {
             final Certificate[] chain = keyStore.getCertificateChain(orgName);
             if (chain == null || chain.length == 0) {
-                throw new RuntimeException("Unable to get certificate for "
-                        + "name \"" + orgName + "\" from keystore");
+                throw new RuntimeException(String.format(CERT_ERROR_MSG, orgName));
             }
 
             X509Certificate[] tmp = new X509Certificate[chain.length];
@@ -236,9 +239,8 @@ public final class TestCertUtil {
             PrivateKey key = (PrivateKey) keyStore.getKey(orgName,
                     password.toCharArray());
             if (key == null) {
-                throw new RuntimeException("Unable to get key for "
-                        + "name \"" + orgName + "\" using password \""
-                        + password + "\" from keystore");
+                throw new RuntimeException(
+                        String.format(CERT_ERROR_WITH_PASSWD_MSG, orgName, password));
             }
 
             return key;

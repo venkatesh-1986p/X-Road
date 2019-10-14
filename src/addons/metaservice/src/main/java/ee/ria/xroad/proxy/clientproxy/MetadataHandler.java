@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -50,7 +52,7 @@ public class MetadataHandler extends AbstractClientProxyHandler {
     @Override
     MessageProcessorBase createRequestProcessor(String target,
             HttpServletRequest request, HttpServletResponse response,
-            OpMonitoringData opMonitoringData) throws Exception {
+            OpMonitoringData opMonitoringData) {
         log.trace("createRequestProcessor({})", target);
 
         // opMonitoringData is null, do not use it.
@@ -64,14 +66,11 @@ public class MetadataHandler extends AbstractClientProxyHandler {
                     "Target must not be null");
         }
 
-        MetadataClientRequestProcessor processor =
-                new MetadataClientRequestProcessor(target, request, response);
-
+        MetadataClientRequestProcessor processor = new MetadataClientRequestProcessor(target, request, response);
         if (processor.canProcess()) {
             log.trace("Processing with MetadataClientRequestProcessor");
             return processor;
         }
-
         return null;
     }
 }

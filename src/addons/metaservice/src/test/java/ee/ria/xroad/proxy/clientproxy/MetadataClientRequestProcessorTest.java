@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,8 +33,8 @@ import ee.ria.xroad.common.metadata.CentralServiceListType;
 import ee.ria.xroad.common.metadata.ClientListType;
 import ee.ria.xroad.common.metadata.ObjectFactory;
 import ee.ria.xroad.proxy.conf.KeyConf;
-import ee.ria.xroad.proxy.testsuite.TestGlobalConf;
-import ee.ria.xroad.proxy.testsuite.TestKeyConf;
+import ee.ria.xroad.proxy.testsuite.TestSuiteGlobalConf;
+import ee.ria.xroad.proxy.testsuite.TestSuiteKeyConf;
 import ee.ria.xroad.proxy.util.MetaserviceTestUtil;
 
 import org.junit.Before;
@@ -50,6 +52,8 @@ import javax.xml.bind.Unmarshaller;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -83,6 +87,7 @@ public class MetadataClientRequestProcessorTest {
     public ExpectedException thrown = ExpectedException.none();
 
     private HttpServletRequest mockRequest;
+    private HttpServletRequest mockJsonRequest;
     private HttpServletResponse mockResponse;
     private MetaserviceTestUtil.StubServletOutputStream mockServletOutputStream;
 
@@ -101,13 +106,16 @@ public class MetadataClientRequestProcessorTest {
     @Before
     public void init() throws IOException {
 
-        GlobalConf.reload(new TestGlobalConf());
-        KeyConf.reload(new TestKeyConf());
+        GlobalConf.reload(new TestSuiteGlobalConf());
+        KeyConf.reload(new TestSuiteKeyConf());
 
         mockRequest = mock(HttpServletRequest.class);
+        mockJsonRequest = mock(HttpServletRequest.class);
         mockResponse = mock(HttpServletResponse.class);
         mockServletOutputStream = new MetaserviceTestUtil.StubServletOutputStream();
         when(mockResponse.getOutputStream()).thenReturn(mockServletOutputStream);
+        when(mockJsonRequest.getHeaders("Accept"))
+                .thenReturn(Collections.enumeration(Arrays.asList("application/json")));
     }
 
 
@@ -174,7 +182,7 @@ public class MetadataClientRequestProcessorTest {
                 createMember("anothermemeber", "somesub"),
                 createMember("thirdmember", null));
 
-        GlobalConf.reload(new TestGlobalConf() {
+        GlobalConf.reload(new TestSuiteGlobalConf() {
 
             @Override
             public List<MemberInfo> getMembers(String... instanceIdentifier) {
@@ -209,6 +217,30 @@ public class MetadataClientRequestProcessorTest {
     }
 
     @Test
+    public void shouldProcessListClientsAndReturnJson() throws Exception {
+
+        final List<MemberInfo> expectedMembers = Arrays.asList(
+                createMember("producer", null),
+                createMember("producer", "subsystem"));
+
+        GlobalConf.reload(new TestSuiteGlobalConf() {
+            @Override
+            public List<MemberInfo> getMembers(String... instanceIdentifier) {
+                String[] instances = instanceIdentifier;
+                assertThat("Wrong Xroad instance in query", instances, arrayContaining(EXPECTED_XR_INSTANCE));
+                return expectedMembers;
+            }
+        });
+
+        MetadataClientRequestProcessor processorToTest =
+                new MetadataClientRequestProcessor(LIST_CLIENTS, mockJsonRequest, mockResponse);
+
+        processorToTest.process();
+
+        assertContentTypeIsIn(Arrays.asList("application/json; charset=utf-8"));
+    }
+
+    @Test
     public void shouldProcessListCentralServices() throws Exception {
 
         final List<CentralServiceId> expectedCentraServices = Arrays.asList(
@@ -216,7 +248,7 @@ public class MetadataClientRequestProcessorTest {
                 create(EXPECTED_XR_INSTANCE, "someService"),
                 create(EXPECTED_XR_INSTANCE, "getRandom"));
 
-        GlobalConf.reload(new TestGlobalConf() {
+        GlobalConf.reload(new TestSuiteGlobalConf() {
 
             @Override
             public List<CentralServiceId> getCentralServices(String instanceIdentifier) {
@@ -243,6 +275,25 @@ public class MetadataClientRequestProcessorTest {
         assertThat("Wrong services", resultCentralServices,
                 containsInAnyOrder(expectedCentraServices.toArray()));
 
+    }
+
+    @Test
+    public void shouldAcceptJson() {
+        final Enumeration<String> accept =
+                Collections.enumeration(Arrays.asList("text/xml;q=1.0", "application/json;q=0.9 , text/*"));
+        assertTrue(MetadataClientRequestProcessor.acceptsJson(accept));
+    }
+
+    @Test
+    public void shouldNotAcceptJson() {
+        assertFalse(MetadataClientRequestProcessor.acceptsJson(null));
+        assertFalse(MetadataClientRequestProcessor.acceptsJson(Collections.emptyEnumeration()));
+
+        assertFalse(MetadataClientRequestProcessor.acceptsJson(Collections.enumeration(Arrays.asList(
+                "x-this/that;q=1.0;param=value",
+                "text/xml, */*"
+                )))
+        );
     }
 
     // handle WSDL does not have it's own unit test in this class, but WsdlRequestProcessor has it's own test, and it

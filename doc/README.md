@@ -16,6 +16,7 @@ Index of X-Road Documentation
 - [\[ARC-ENVMON\] Environmental Monitoring Architecture](EnvironmentalMonitoring/Monitoring-architecture.md)
 
 ### Protocols
+- [\[PR-REST\] Message Protocol for REST](Protocols/pr-rest_x-road_message_protocol_for_rest.md)
 - [\[PR-MESS\] Message Protocol](Protocols/pr-mess_x-road_message_protocol.md)
 - [\[PR-MESSTRANSP\] Message Transport Protocol](Protocols/pr-messtransp_x-road_message_transport_protocol_2.2_Y-743-4.docx)
 - [\[PR-MSERV\] Protocol for Management Services](Protocols/pr-mserv_x-road_protocol_for_management_services.md)
@@ -36,7 +37,7 @@ Index of X-Road Documentation
 - [\[UG-SS\] Security Server User Guide](Manuals/ug-ss_x-road_6_security_server_user_guide.md)
 - [\[UG-CS\] Central Server User Guide](Manuals/ug-cs_x-road_6_central_server_user_guide.md)
 - [\[UG-SC\] Signer Console Users Guide](Manuals/ug-sc_x-road_signer-console_users_guide_2.5_Y-883-20.docx)
-- [\[UG-SIGDOC\] Signed Document Download and Verification Manual](Manuals/ug-sigdoc_x-road_signed_document_download_and_verification_manual_1.4.1_Y-883-21.docx)
+- [\[UG-SIGDOC\] Signed Document Download and Verification Manual](Manuals/ug-sigdoc_x-road_signed_document_download_and_verification_manual.md)
 - [\[UG-CP\] Configuration Proxy Manual](Manuals/ug-cp_x-road_v6_configuration_proxy_manual.md)
 - [\[UG-SYSPAR\] System Parameters](Manuals/ug-syspar_x-road_v6_system_parameters.md)
 - [\[UG-OPMONSYSPAR\] Operational Monitoring System Parameters](OperationalMonitoring/Manuals/ug-opmonsyspar_x-road_operational_monitoring_system_parameters_Y-1099-1.md)
@@ -56,7 +57,7 @@ Index of X-Road Documentation
 
 ### Data Models
 
-- [\[DM-SS\] Security Server Configuration](DataModels/dm-ss_x-road_security_server_configuration._data_model_1.2_Y-883-12.docx)
+- [\[DM-SS\] Security Server Configuration](DataModels/dm-ss_x-road_security_server_configuration_data_model.md)
 - [\[DM-CS\] Central Server Configuration](DataModels/dm-cs_x-road_central_server_configuration_data_model.md)
 - [\[DM-ML\] Message Log](DataModels/dm-ml_x-road_message_log_data_model.md)
 

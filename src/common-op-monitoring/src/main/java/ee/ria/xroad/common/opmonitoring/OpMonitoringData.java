@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2016 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -86,17 +88,22 @@ public class OpMonitoringData {
     private static final String MESSAGE_PROTOCOL_VERSION =
             "messageProtocolVersion";
 
+    private static final String X_REQUEST_ID = "xRequestId";
     private static final String REQUEST_SOAP_SIZE = "requestSoapSize";
     private static final String REQUEST_MIME_SIZE = "requestMimeSize";
+    private static final String REQUEST_REST_SIZE = "requestRestSize";
+
     private static final String REQUEST_ATTACHMENT_COUNT =
             "requestAttachmentCount";
 
     private static final String RESPONSE_SOAP_SIZE = "responseSoapSize";
     private static final String RESPONSE_MIME_SIZE = "responseMimeSize";
+    private static final String RESPONSE_REST_SIZE = "responseRestSize";
     private static final String RESPONSE_ATTACHMENT_COUNT =
             "responseAttachmentCount";
 
     private static final String SUCCEEDED = "succeeded";
+    private static final String REST_RESPONSE_STATUS_CODE = "statusCode";
 
     private static final String SOAP_FAULT_CODE = "soapFaultCode";
     private static final String SOAP_FAULT_STRING = "soapFaultString";
@@ -147,7 +154,7 @@ public class OpMonitoringData {
     /**
      * Constructor for creating an instance in code that handles incoming
      * XRoad requests.
-     * @param type security server type
+     * @param type        security server type
      * @param requestInTs the timestamp of handling the XRoad request
      */
     public OpMonitoringData(SecurityServerType type, long requestInTs) {
@@ -209,12 +216,16 @@ public class OpMonitoringData {
     }
 
     /**
-     * Sets the "response out" timestamp. In case the field
-     * assignResponseOutTsToResponseInTs is true,
-     * the same value is assigned to the "response in" also.
+     * Sets the "response out" timestamp. In case the field assignResponseOutTsToResponseInTs is
+     * true, the same value is assigned to the "response in" also.
      * @param timestamp Unix timestamp in milliseconds
+     * @param overwrite if true, old value is overwritten, otherwise old value remains
      */
-    public void setResponseOutTs(long timestamp) {
+    public void setResponseOutTs(long timestamp, boolean overwrite) {
+        if (!overwrite && data.get(RESPONSE_OUT_TIMESTAMP) != null) {
+            return;
+        }
+
         if (assignResponseOutTsToResponseInTs) {
             setResponseInTs(timestamp);
         }
@@ -310,6 +321,14 @@ public class OpMonitoringData {
     }
 
     /**
+     * Sets request REST size.
+     * @param size REST size
+     */
+    public void setRequestRestSize(long size) {
+        data.put(REQUEST_REST_SIZE, size);
+    }
+
+    /**
      * Sets request SOAP size.
      * @param size SOAP size
      */
@@ -342,6 +361,14 @@ public class OpMonitoringData {
     }
 
     /**
+     * Sets response REST size.
+     * @param size REST size
+     */
+    public void setResponseRestSize(long size) {
+        data.put(RESPONSE_REST_SIZE, size);
+    }
+
+    /**
      * Sets response MIME size
      * @param size MIME size
      */
@@ -366,6 +393,14 @@ public class OpMonitoringData {
     }
 
     /**
+     * Sets rest response status code
+     * @param statusCode http status code for the response
+     */
+    public void setRestResponseStatusCode(int statusCode) {
+        data.put(REST_RESPONSE_STATUS_CODE, statusCode);
+    }
+
+    /**
      * Sets a fault code and string from given CodedException.
      * @param e CodedException
      */
@@ -374,5 +409,13 @@ public class OpMonitoringData {
             data.put(SOAP_FAULT_CODE, e.getFaultCode());
             data.put(SOAP_FAULT_STRING, e.getFaultString());
         }
+    }
+
+    /**
+     * Sets x-road-request-id of the message.
+     * @param xRequestId x-request-id
+     */
+    public void setXRequestId(String xRequestId) {
+        data.put(X_REQUEST_ID, xRequestId);
     }
 }

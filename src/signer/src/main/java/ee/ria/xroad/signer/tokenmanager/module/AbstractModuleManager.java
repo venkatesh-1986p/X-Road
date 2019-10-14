@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -57,14 +59,14 @@ public abstract class AbstractModuleManager extends AbstractUpdateableActor {
     @Override
     public SupervisorStrategy supervisorStrategy() {
         return new OneForOneStrategy(-1, Duration.Inf(),
-            throwable -> {
-                if (throwable instanceof PKCS11Exception) {
-                    // PKCS11Exceptions should make the module reinitialized
-                    return SupervisorStrategy.restart();
-                } else {
-                    return SupervisorStrategy.resume();
+                throwable -> {
+                    if (throwable instanceof PKCS11Exception) {
+                        // PKCS11Exceptions should make the module reinitialized
+                        return SupervisorStrategy.restart();
+                    } else {
+                        return SupervisorStrategy.resume();
+                    }
                 }
-            }
         );
     }
 

@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2016 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,9 +43,6 @@ public class StoreOpMonitoringDataRequest {
 
     @SerializedName("records")
     private final List<Map<String, Object>> records = new ArrayList<>();
-
-    public StoreOpMonitoringDataRequest() {
-    }
 
     public void addRecord(Map<String, Object> record) {
         records.add(record);

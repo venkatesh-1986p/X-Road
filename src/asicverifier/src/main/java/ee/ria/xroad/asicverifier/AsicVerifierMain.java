@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,18 +26,22 @@ package ee.ria.xroad.asicverifier;
 
 import ee.ria.xroad.common.CodedException;
 import ee.ria.xroad.common.SystemProperties;
-import ee.ria.xroad.common.asic.AsicContainer;
+import ee.ria.xroad.common.Version;
 import ee.ria.xroad.common.asic.AsicContainerEntries;
 import ee.ria.xroad.common.asic.AsicContainerVerifier;
 import ee.ria.xroad.common.asic.AsicUtils;
 import ee.ria.xroad.common.conf.globalconf.GlobalConf;
 
+import org.apache.commons.io.IOUtils;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Scanner;
-
-import static java.lang.System.out;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * ASiC container verifier utility program.
@@ -47,11 +53,13 @@ public final class AsicVerifierMain {
 
     /**
      * Main program entry point.
+     *
      * @param args program arguments
-     * @throws Exception in case of errors
      */
-    public static void main(String[] args) throws Exception {
-        if (args.length < 2) {
+    public static void main(String[] args) {
+        if (args.length == 1 && "--version".equals(args[0])) {
+            showVersion();
+        } else if (args.length != 2) {
             showUsage();
         } else {
             loadConf(args[0]);
@@ -62,7 +70,7 @@ public final class AsicVerifierMain {
     private static void loadConf(String confPath) {
         System.setProperty(SystemProperties.CONFIGURATION_PATH, confPath);
 
-        out.println("Loading configuration from " + confPath + "...");
+        System.out.println("Loading configuration from " + confPath + "...");
         try {
             GlobalConf.reload();
             verifyConfPathCorrectness();
@@ -81,47 +89,64 @@ public final class AsicVerifierMain {
     }
 
     private static void verifyAsic(String fileName) {
-        out.println("Verifying ASiC container \"" + fileName + "\" ...");
+        System.out.println("Verifying ASiC container \"" + fileName + "\" ...");
 
+        AsicContainerVerifier verifier = null;
         try {
-            AsicContainerVerifier verifier = new AsicContainerVerifier(fileName);
+            verifier = new AsicContainerVerifier(fileName);
             verifier.verify();
 
             onVerificationSucceeded(verifier);
         } catch (Exception e) {
             onVerificationFailed(e);
         }
+        extractMessage(fileName);
     }
 
-    @SuppressWarnings("resource") //
-    private static void onVerificationSucceeded(
-            AsicContainerVerifier verifier) throws IOException {
-        out.println(AsicUtils.buildSuccessOutput(verifier));
-
-        out.print("\nWould you like to extract the signed files? (y/n) ");
-
-        if ("y".equalsIgnoreCase(new Scanner(System.in).nextLine())) {
-            AsicContainer asic = verifier.getAsic();
-            writeToFile(AsicContainerEntries.ENTRY_MESSAGE, asic.getMessage());
-
-            out.println("Files successfully extracted.");
-        }
+    @SuppressWarnings("resource")
+    private static void onVerificationSucceeded(AsicContainerVerifier verifier) {
+        System.out.println(AsicUtils.buildSuccessOutput(verifier));
     }
 
     private static void onVerificationFailed(Throwable cause) {
+        cause.printStackTrace();
         System.err.println(AsicUtils.buildFailureOutput(cause));
     }
 
-    private static void writeToFile(String fileName, String contents) throws IOException {
-        try (FileOutputStream file = new FileOutputStream(fileName)) {
-            file.write(contents.getBytes(StandardCharsets.UTF_8));
-        }
+    private static void extractMessage(String fileName) {
+        System.out.print("\nWould you like to extract the signed files? (y/n) ");
 
-        out.println("Created file " + fileName);
+        if ("y".equalsIgnoreCase(new Scanner(System.in).nextLine())) {
+
+            try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(Paths.get(fileName)))) {
+                ZipEntry entry;
+                while ((entry = zis.getNextEntry()) != null) {
+                    if (AsicContainerEntries.ENTRY_MESSAGE.equalsIgnoreCase(entry.getName())) {
+                        writeToFile(AsicContainerEntries.ENTRY_MESSAGE, zis);
+                    }
+                    if (entry.getName().startsWith(AsicContainerEntries.ENTRY_ATTACHMENT)) {
+                        writeToFile(entry.getName(), zis);
+                    }
+                }
+                System.out.println("Files successfully extracted.");
+            } catch (IOException e) {
+                System.out.println("Unable to extract files");
+            }
+        }
+    }
+
+    private static void writeToFile(String fileName, InputStream contents) throws IOException {
+        try (FileOutputStream file = new FileOutputStream(fileName)) {
+            IOUtils.copy(contents, file);
+        }
+        System.out.println("Created file " + fileName);
     }
 
     private static void showUsage() {
-        out.println("Usage: AsicVerifier "
-                + "<configuration path> <asic container>");
+        System.out.println("Usage: java -jar asicverifier.jar ( --version | <configuration path> <asic container> )");
+    }
+
+    private static void showVersion() {
+        System.out.println("AsicVerifier (X-Road) " + Version.XROAD_VERSION);
     }
 }

@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +27,7 @@ package ee.ria.xroad.common;
 import ee.ria.xroad.common.Request.RequestTag;
 import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.identifier.ServiceId;
+import ee.ria.xroad.common.util.XmlUtils;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
@@ -34,7 +37,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Tests to verify test requests are created as expected.
@@ -82,7 +86,8 @@ public class RequestTest {
         // Then
         String expectedRequest = FileUtils.readFileToString(new File(
                 "src/test/resources/xroadDoclit2.request"));
-        assertEquals(expectedRequest, xmlFromRequest);
+
+        assertXml(xmlFromRequest, expectedRequest);
     }
 
     /**
@@ -125,7 +130,7 @@ public class RequestTest {
         // Then
         String expectedRequest = FileUtils.readFileToString(new File(
                 "src/test/resources/v5DoclitWithVersion.request"));
-        assertEquals(expectedRequest, xmlFromRequest);
+        assertXml(xmlFromRequest, expectedRequest);
     }
 
     /**
@@ -168,6 +173,15 @@ public class RequestTest {
         // Then
         String expectedRequest = FileUtils.readFileToString(new File(
                 "src/test/resources/v5DoclitWithoutVersion.request"));
-        assertEquals(expectedRequest, xmlFromRequest);
+        assertXml(xmlFromRequest, expectedRequest);
+    }
+
+    private void assertXml(String xml, String expectedXml) {
+        try {
+            assertTrue(XmlUtils.parseDocument(xml).isEqualNode(XmlUtils.parseDocument(expectedXml)));
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
     }
 }

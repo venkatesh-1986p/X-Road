@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +35,7 @@ import ee.ria.xroad.common.util.MimeUtils;
 import ee.ria.xroad.common.util.PerformanceLogger;
 import ee.ria.xroad.proxy.ProxyMain;
 import ee.ria.xroad.proxy.opmonitoring.OpMonitoring;
+import ee.ria.xroad.proxy.util.MessageProcessorBase;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
@@ -51,6 +54,8 @@ import static ee.ria.xroad.common.ErrorCodes.SERVER_SERVERPROXY_X;
 import static ee.ria.xroad.common.ErrorCodes.X_INVALID_HTTP_METHOD;
 import static ee.ria.xroad.common.ErrorCodes.translateWithPrefix;
 import static ee.ria.xroad.common.opmonitoring.OpMonitoringData.SecurityServerType.PRODUCER;
+import static ee.ria.xroad.common.util.MimeUtils.HEADER_MESSAGE_TYPE;
+import static ee.ria.xroad.common.util.MimeUtils.VALUE_MESSAGE_TYPE_REST;
 import static ee.ria.xroad.common.util.TimeUtils.getEpochMillisecond;
 
 @Slf4j
@@ -60,6 +65,7 @@ class ServerProxyHandler extends HandlerBase {
 
     private final HttpClient client;
     private final HttpClient opMonitorClient;
+    private final long idleTimeout = SystemProperties.getServerProxyConnectorMaxIdleTime();
 
     ServerProxyHandler(HttpClient client, HttpClient opMonitorClient) {
         this.client = client;
@@ -87,39 +93,45 @@ class ServerProxyHandler extends HandlerBase {
             GlobalConf.verifyValidity();
 
             logProxyVersion(request);
-
-            ServerMessageProcessor processor = createRequestProcessor(request, response, start, opMonitoringData);
+            baseRequest.getHttpChannel().setIdleTimeout(idleTimeout);
+            final MessageProcessorBase processor = createRequestProcessor(request, response, opMonitoringData);
             processor.process();
+
+            final MessageInfo messageInfo = processor.createRequestMessageInfo();
+            if (processor.verifyMessageExchangeSucceeded()) {
+                MonitorAgent.success(messageInfo, new Date(start), new Date());
+            } else {
+                MonitorAgent.failure(messageInfo, null, null);
+            }
         } catch (Throwable e) { // We want to catch serious errors as well
             CodedException cex = translateWithPrefix(SERVER_SERVERPROXY_X, e);
 
             log.error("Request processing error ({})", cex.getFaultDetail(), e);
 
             opMonitoringData.setSoapFault(cex);
+            opMonitoringData.setResponseOutTs(getEpochMillisecond(), false);
 
             failure(response, cex);
         } finally {
             baseRequest.setHandled(true);
 
-            opMonitoringData.setResponseOutTs(getEpochMillisecond());
+            opMonitoringData.setResponseOutTs(getEpochMillisecond(), false);
             OpMonitoring.store(opMonitoringData);
 
             PerformanceLogger.log(log, start, "Request handled");
         }
     }
 
-    private ServerMessageProcessor createRequestProcessor(HttpServletRequest request, HttpServletResponse response,
-            final long start, OpMonitoringData opMonitoringData) throws Exception {
-        return new ServerMessageProcessor(request, response, client, getClientSslCertChain(request), opMonitorClient,
-                opMonitoringData) {
-            @Override
-            protected void postprocess() throws Exception {
-                super.postprocess();
+    private MessageProcessorBase createRequestProcessor(HttpServletRequest request, HttpServletResponse response,
+            OpMonitoringData opMonitoringData) throws Exception {
 
-                MessageInfo messageInfo = createRequestMessageInfo();
-                MonitorAgent.success(messageInfo, new Date(start), new Date());
-            }
-        };
+        if (VALUE_MESSAGE_TYPE_REST.equals(request.getHeader(HEADER_MESSAGE_TYPE))) {
+            return new ServerRestMessageProcessor(request, response, client, getClientSslCertChain(request),
+                    opMonitoringData);
+        } else {
+            return new ServerMessageProcessor(request, response, client, getClientSslCertChain(request),
+                    opMonitorClient, opMonitoringData);
+        }
     }
 
     @Override
@@ -131,7 +143,7 @@ class ServerProxyHandler extends HandlerBase {
 
     private static void logProxyVersion(HttpServletRequest request) {
         String thatVersion = getVersion(request.getHeader(MimeUtils.HEADER_PROXY_VERSION));
-        String thisVersion = getVersion(ProxyMain.getVersion());
+        String thisVersion = getVersion(ProxyMain.readProxyVersion());
 
         log.info("Received request from {} (security server version: {})", request.getRemoteAddr(), thatVersion);
 

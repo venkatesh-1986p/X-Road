@@ -1,6 +1,9 @@
 # X-Road Terms and Abbreviations
 
-Document ID: TA-TERMS
+**X-ROAD 6**
+
+Version: 0.6  
+Doc. ID:  TA-TERMS
 
 ## Version history
 
@@ -8,8 +11,10 @@ Document ID: TA-TERMS
  ---------- | ------- | --------------------------------------------------------------- | --------------------
  06.07.2015 | 0.1     | Initial draft                                                   |
  23.02.2017 | 0.2     | Converted to Github flavoured Markdown, added license text, adjusted tables and identification for better output in PDF. Added explanation of monitoring service | Toomas Mölder 
- 14.11.2017 | 0.3     | All the descriptions in estonian language removed. Couple of new descriptions added | Antti Luoma
+ 14.11.2017 | 0.3     | All the descriptions in Estonian language removed. Couple of new descriptions added | Antti Luoma
  06.03.2018 | 0.4     | Moved/merged terminology explanations from other X-Road repository MD-documents to this document | Tatu Repo |
+ 03.01.2019 | 0.5     | Minor changes - typos fixed. | Yamato Kataoka |
+ 16.04.2019 | 0.6     | Add description of REST services. | Petteri Kivimäki |
 
 ## Table of Contents
 
@@ -46,7 +51,7 @@ This document is licensed under the Creative Commons Attribution-ShareAlike 3.0 
 
 ## 1 X-Road and X-Road Instance
 
-**External X-Road instance** – an instance that has been federated with the local instance. For example the FI-instance is defined as an external instance in the EE's local point of view.
+**External X-Road instance** – an instance that has been federated with the local instance. For example, the FI-instance is defined as an external instance in the EE's local point of view.
 
 **Local X-Road instance** – a group of members that are registered in a particular instance.
 
@@ -72,7 +77,7 @@ This document is licensed under the Creative Commons Attribution-ShareAlike 3.0 
 
 ## 3 Trust services
 
-**Approved certification service provider** – Provider of a trust service approved on X-Road, who provides at least following trust services approved on X-Road: service of authentication certificate of security server, service of signature certificate of a member, and sertificate validation service (OCSP).
+**Approved certification service provider** – Provider of a trust service approved on X-Road, who provides at least following trust services approved on X-Road: service of authentication certificate of security server, service of signature certificate of a member, and certificate validation service (OCSP).
 
 **Approved timestamp service provider** – Provider of a trust service approved on X-Road, who provides the timestamp service.
 
@@ -118,7 +123,7 @@ This document is licensed under the Creative Commons Attribution-ShareAlike 3.0 
 
 **Affiliation of membership** – a process ending with becoming a member of X-Road. Becoming a member requires conclusion of affiliation contract and registration of data of the member (name and ID of the member) in X-Road central server. Requirements for affiliation are established by X-Road governing authority with relevant regulation/affiliation conditions
 
-**Dataservice interfacing** – a process, where a member of X-Road creates organizational and technical capacity for offering or using dataservice. Interfacing includes development of the service by the member as well as its setup in security server, conclusion of service usage contracts and granting access rights. In order to use the service, service provider as well as service client shall undergo interfacing.
+**Dataservice interfacing** – a process, where a member of X-Road creates organizational and technical capacity for offering or using dataservice. Interfacing includes development of the service by the member as well as its setup in security server, conclusion of service usage contracts and granting access rights. In order to use the service, service provider, as well as service client, shall undergo interfacing.
 
 **Interaction** – activation procedure of dataservice (single use), bilateral information exchange through dataservice, i.e. request of dataservice by the service client by sending a request, to which the service provider will send a response.
 
@@ -130,7 +135,7 @@ This document is licensed under the Creative Commons Attribution-ShareAlike 3.0 
 
 ### 6.1 Technology in general
 
-**Core technology** – Component of X-Road software, ensuring integrity and verification value of messages between members. Core technology includes central server, configuration proxy and security server.
+**Core technology** – Component of X-Road software, ensuring integrity and verification value of messages between members. Core technology includes central server, configuration proxy, and security server.
 
 **Service technology** – Component of X-Road software, simplifying or enabling the use of core technology.
 
@@ -149,7 +154,7 @@ This document is licensed under the Creative Commons Attribution-ShareAlike 3.0 
 
 ### 6.3 X-Road external components
 
-**Adapter Service** – converts a request or response query (e.g. from REST) to required X-Road SOAP-protocol. 
+**Adapter Service** – converts a request or response query to X-Road Message Protocol for SOAP or X-Road Message Protocol for REST. 
 
 **Information system** – a system including technological as well as organizational information processing of a member of X-Road. The information system (IS) uses and/or provides services via the X-Road.
 
@@ -172,7 +177,7 @@ This document is licensed under the Creative Commons Attribution-ShareAlike 3.0 
 
 **Management service** – services provided by the X-Road governing organization to manage security servers and security server clients. Management services are implemented as standard X-Road services following X-Road message protocol.
 
-**Message** – Data set meeting profile description and service description required by X-Road governing authority. Messages are divided into requests and responses. Message consists of headers and payload. Payload is a SOAP body that contains service specific content.
+**Message** – Data set meeting profile description and service description required by X-Road governing authority. Messages are divided into requests and responses. SOAP message consists of headers and a SOAP body that contains service specific content. REST message consists of HTTP verb, path, query parameters, HTTP headers and message body.
 
 **Metadata service** – services between members executed by X-Road governing authority, enabling members of X-Road to get an overview of X-Road (e.g. enabling to get an overview of completed services and access rights needed for the consumption of services). Generally, it shall meet the description of X-Road service.
 
@@ -186,7 +191,7 @@ This document is licensed under the Creative Commons Attribution-ShareAlike 3.0 
 
 **Service client** – is an X-Road member, subsystem, local access rights group or global access rights group that has access rights to one or more services of a security server client.
 
-**X-Road service** – SOAP-based web service that is offered by an X-Road member or by a subsystem and that can be used by other X-Road members or subsystems.
+**X-Road service** – SOAP- or REST-based web service or API that is offered by an X-Road member or by a subsystem and that can be used by other X-Road members or subsystems.
 
 #### 6.4.2 Subsystems and access rights
 
@@ -232,7 +237,7 @@ This document is licensed under the Creative Commons Attribution-ShareAlike 3.0 
 
 **Member code** – identifier, that uniquely identifies an X-Road member within its member class. The member code remains unchanged during the entire lifetime of the member.
 
-**Member identifier** – identifier, that uniquely identifies a member in the X-Road Network. Member identifier consists of X-Road instance identifier, member class and member code.
+**Member identifier** – identifier, that uniquely identifies a member in the X-Road Network. Member identifier consists of X-Road instance identifier, member class, and member code.
 
 **Security server code** – identifier, that uniquely identifies the security server in all of the security servers of the security server owner.
 
@@ -314,6 +319,8 @@ This document is licensed under the Creative Commons Attribution-ShareAlike 3.0 
 
 ### 7.2 General software terminology
 
+**API** Application Programming Interface
+
 **CI** - Continuous Integration
 
 **DSL** - Domain Specific Language
@@ -333,6 +340,8 @@ This document is licensed under the Creative Commons Attribution-ShareAlike 3.0 
 **MIME** - Multipurpose Internet Mail Extensions
 
 **RPC** – Remote Procedure Call
+
+**REST** - Representational State Transfer
 
 **SDK** - Software Development Kit
 

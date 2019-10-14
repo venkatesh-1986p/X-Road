@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -122,6 +124,7 @@ public final class ManagementRequestClient implements StartStop {
 
     @Override
     public void join() throws InterruptedException {
+        // Not applicable
     }
 
     // -- Helper methods ------------------------------------------------------
@@ -132,6 +135,7 @@ public final class ManagementRequestClient implements StartStop {
         TrustManager tm = new X509TrustManager() {
             @Override
             public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+                // As manager of the client the method gets never called
             }
 
             @Override
@@ -172,10 +176,11 @@ public final class ManagementRequestClient implements StartStop {
         TrustManager tm = new X509TrustManager() {
             @Override
             public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+                // never called as this is trustmanager of a client
             }
             @Override
             public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-
+                // localhost called so server is trusted
             }
             @Override
             public X509Certificate[] getAcceptedIssuers() {

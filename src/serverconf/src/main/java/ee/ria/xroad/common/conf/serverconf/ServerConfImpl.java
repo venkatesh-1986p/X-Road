@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,13 +31,15 @@ import ee.ria.xroad.common.conf.serverconf.dao.CertificateDAOImpl;
 import ee.ria.xroad.common.conf.serverconf.dao.ClientDAOImpl;
 import ee.ria.xroad.common.conf.serverconf.dao.ServerConfDAOImpl;
 import ee.ria.xroad.common.conf.serverconf.dao.ServiceDAOImpl;
-import ee.ria.xroad.common.conf.serverconf.dao.WsdlDAOImpl;
+import ee.ria.xroad.common.conf.serverconf.dao.ServiceDescriptionDAOImpl;
 import ee.ria.xroad.common.conf.serverconf.model.AccessRightType;
 import ee.ria.xroad.common.conf.serverconf.model.ClientType;
+import ee.ria.xroad.common.conf.serverconf.model.DescriptionType;
+import ee.ria.xroad.common.conf.serverconf.model.EndpointType;
 import ee.ria.xroad.common.conf.serverconf.model.LocalGroupType;
 import ee.ria.xroad.common.conf.serverconf.model.ServerConfType;
+import ee.ria.xroad.common.conf.serverconf.model.ServiceDescriptionType;
 import ee.ria.xroad.common.conf.serverconf.model.ServiceType;
-import ee.ria.xroad.common.conf.serverconf.model.WsdlType;
 import ee.ria.xroad.common.db.TransactionCallback;
 import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.identifier.GlobalGroupId;
@@ -44,11 +48,13 @@ import ee.ria.xroad.common.identifier.SecurityCategoryId;
 import ee.ria.xroad.common.identifier.SecurityServerId;
 import ee.ria.xroad.common.identifier.ServiceId;
 import ee.ria.xroad.common.identifier.XRoadId;
+import ee.ria.xroad.common.util.UriUtils;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.Session;
 
+import java.net.URI;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,30 +74,16 @@ public class ServerConfImpl implements ServerConfProvider {
     // default service connection timeout in seconds
     private static final int DEFAULT_SERVICE_TIMEOUT = 30;
 
-    private static SecurityServerId identifier;
-
-    // ------------------------------------------------------------------------
-
     @Override
     public SecurityServerId getIdentifier() {
-        synchronized (this) {
-            return tx(session -> {
-                if (identifier == null) {
-                    ServerConfType confType = getConf();
-
-                    ClientType owner = confType.getOwner();
-                    if (owner == null) {
-                        throw new CodedException(X_MALFORMED_SERVERCONF,
-                                "Owner is not set");
-                    }
-
-                    identifier = SecurityServerId.create(owner.getIdentifier(),
-                            confType.getServerCode());
-                }
-
-                return identifier;
-            });
-        }
+        return tx(session -> {
+            ServerConfType confType = getConf();
+            ClientType owner = confType.getOwner();
+            if (owner == null) {
+                throw new CodedException(X_MALFORMED_SERVERCONF, "Owner is not set");
+            }
+            return SecurityServerId.create(owner.getIdentifier(), confType.getServerCode());
+        });
     }
 
     @Override
@@ -131,12 +123,30 @@ public class ServerConfImpl implements ServerConfProvider {
     }
 
     @Override
+    public List<ServiceId> getServicesByDescriptionType(ClientId serviceProvider, DescriptionType descriptionType) {
+        return tx(session -> new ServiceDAOImpl().getServicesByDescriptionType(session,
+                serviceProvider, descriptionType));
+    }
+
+    @Override
     public List<ServiceId> getAllowedServices(ClientId serviceProvider, ClientId client) {
         return tx(session -> {
             List<ServiceId> allServices =
                     new ServiceDAOImpl().getServices(session, serviceProvider);
             return allServices.stream()
-                    .filter(s -> internalIsQueryAllowed(session, client, s))
+                    .filter(s -> internalIsQueryAllowed(session, client, s, null, null))
+                    .collect(Collectors.toList());
+        });
+    }
+
+    @Override
+    public List<ServiceId> getAllowedServicesByDescriptionType(ClientId serviceProvider, ClientId client,
+                                                               DescriptionType descriptionType) {
+        return tx(session -> {
+            List<ServiceId> allServices =
+                    new ServiceDAOImpl().getServicesByDescriptionType(session, serviceProvider, descriptionType);
+            return allServices.stream()
+                    .filter(s -> internalIsQueryAllowed(session, client, s, null, null))
                     .collect(Collectors.toList());
         });
     }
@@ -210,13 +220,13 @@ public class ServerConfImpl implements ServerConfProvider {
     @Override
     public String getDisabledNotice(ServiceId service) {
         return tx(session -> {
-            WsdlType wsdlType = getWsdl(session, service);
-            if (wsdlType != null && wsdlType.isDisabled()) {
-                if (wsdlType.getDisabledNotice() == null) {
+            ServiceDescriptionType serviceDescriptionType = getServiceDescription(session, service);
+            if (serviceDescriptionType != null && serviceDescriptionType.isDisabled()) {
+                if (serviceDescriptionType.getDisabledNotice() == null) {
                     return String.format("Service '%s' is disabled", service);
                 }
 
-                return wsdlType.getDisabledNotice();
+                return serviceDescriptionType.getDisabledNotice();
             }
 
             return null;
@@ -229,8 +239,8 @@ public class ServerConfImpl implements ServerConfProvider {
     }
 
     @Override
-    public boolean isQueryAllowed(ClientId client, ServiceId service) {
-        return tx(session -> internalIsQueryAllowed(session, client, service));
+    public boolean isQueryAllowed(ClientId client, ServiceId service, String method, String path) {
+        return tx(session -> internalIsQueryAllowed(session, client, service, method, path));
     }
 
     @Override
@@ -253,6 +263,29 @@ public class ServerConfImpl implements ServerConfProvider {
                 .collect(Collectors.toList()));
     }
 
+    @Override
+    public DescriptionType getDescriptionType(ServiceId service) {
+        return tx(session -> {
+            ServiceType serviceType = getService(session, service);
+            if (serviceType != null && serviceType.getServiceDescription() != null) {
+                return serviceType.getServiceDescription().getType();
+            }
+
+            return null;
+        });
+    }
+
+    @Override
+    public String getServiceDescriptionURL(ServiceId service) {
+        return tx(session -> {
+            ServiceType serviceType = getService(session, service);
+            if (serviceType != null && serviceType.getServiceDescription() != null) {
+                return serviceType.getServiceDescription().getUrl();
+            }
+            return null;
+        });
+    }
+
     // ------------------------------------------------------------------------
 
     protected ServerConfType getConf() {
@@ -267,11 +300,12 @@ public class ServerConfImpl implements ServerConfProvider {
         return new ServiceDAOImpl().getService(session, s);
     }
 
-    protected WsdlType getWsdl(Session session, ServiceId service) {
-        return new WsdlDAOImpl().getWsdl(session, service);
+    protected ServiceDescriptionType getServiceDescription(Session session, ServiceId service) {
+        return new ServiceDescriptionDAOImpl().getServiceDescription(session, service);
     }
 
-    private boolean internalIsQueryAllowed(Session session, ClientId client, ServiceId service) {
+    private boolean internalIsQueryAllowed(Session session, ClientId client, ServiceId service, String method,
+            String path) {
 
         if (client == null) {
             return false;
@@ -282,28 +316,44 @@ public class ServerConfImpl implements ServerConfProvider {
             return false;
         }
 
+        return checkAccessRights(clientType, session, client, service, method, path);
+    }
+
+    @SuppressWarnings("squid:S3776")
+    private boolean checkAccessRights(ClientType clientType, Session session, ClientId client, ServiceId service,
+            String method, String path) {
+
+        final String normalizedPath;
+        if (path == null) {
+            normalizedPath = null;
+        } else {
+            normalizedPath = UriUtils.uriPathPercentDecode(URI.create(path).normalize().getRawPath(), true);
+        }
+
         for (AccessRightType accessRight : clientType.getAcl()) {
-            if (!StringUtils.equals(service.getServiceCode(),
-                    accessRight.getServiceCode())) {
+            final EndpointType endpoint = accessRight.getEndpoint();
+            if (!StringUtils.equals(service.getServiceCode(), endpoint.getServiceCode())) {
                 continue;
             }
 
             XRoadId subjectId = accessRight.getSubjectId();
 
             if (subjectId instanceof GlobalGroupId) {
-                if (GlobalConf.isSubjectInGlobalGroup(client,
-                        (GlobalGroupId) subjectId)) {
-                    return true;
-                }
+                if (!GlobalConf.isSubjectInGlobalGroup(client, (GlobalGroupId)subjectId)) continue;
             } else if (subjectId instanceof LocalGroupId) {
-                if (isMemberInLocalGroup(session, client,
-                        (LocalGroupId) subjectId, service)) {
-                    return true;
-                }
-            } else if (subjectId instanceof ClientId) {
-                if (client.equals(subjectId)) {
-                    return true;
-                }
+                if (!isMemberInLocalGroup(session, client, (LocalGroupId)subjectId, service)) continue;
+            } else if (!client.equals(subjectId)) {
+                continue;
+            }
+
+            if (!EndpointType.ANY_METHOD.equals(endpoint.getMethod())
+                    && !endpoint.getMethod().equalsIgnoreCase(method)) {
+                continue;
+            }
+
+            if (EndpointType.ANY_PATH.equals(endpoint.getPath())
+                    || PathGlob.matches(endpoint.getPath(), normalizedPath)) {
+                return true;
             }
         }
 

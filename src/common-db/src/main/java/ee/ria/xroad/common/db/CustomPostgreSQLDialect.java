@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,22 +24,10 @@
  */
 package ee.ria.xroad.common.db;
 
-import org.hibernate.dialect.PostgreSQL82Dialect;
-import org.hibernate.type.descriptor.sql.BinaryTypeDescriptor;
-import org.hibernate.type.descriptor.sql.SqlTypeDescriptor;
+import org.hibernate.dialect.PostgreSQL9Dialect;
 
 /**
- * Handle incompatibility between postgres blob => oid|bytea
+ * @deprecated To be removed
  */
-public class CustomPostgreSQLDialect extends PostgreSQL82Dialect {
-
-    @Override
-    public SqlTypeDescriptor remapSqlTypeDescriptor(
-            SqlTypeDescriptor sqlTypeDescriptor) {
-        if (sqlTypeDescriptor.getSqlType() == java.sql.Types.BLOB) {
-            return BinaryTypeDescriptor.INSTANCE;
-        }
-
-        return super.remapSqlTypeDescriptor(sqlTypeDescriptor);
-    }
+public class CustomPostgreSQLDialect extends PostgreSQL9Dialect {
 }

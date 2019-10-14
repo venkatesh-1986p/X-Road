@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +24,7 @@
  */
 package ee.ria.xroad.proxy.testsuite;
 
+import ee.ria.xroad.common.SystemProperties;
 import ee.ria.xroad.common.TestCertUtil;
 import ee.ria.xroad.common.TestCertUtil.PKCS12;
 import ee.ria.xroad.common.util.CryptoUtils;
@@ -80,13 +83,11 @@ class DummyService extends Server implements StartStop {
         ServerConnector connector = new ServerConnector(this);
         connector.setName("httpConnector");
         connector.setPort(ProxyTestSuite.SERVICE_PORT);
-        connector.setSoLingerTime(0);
         addConnector(connector);
 
         ServerConnector sslConnector = createSslConnector();
         sslConnector.setName("httpsConnector");
         sslConnector.setPort(ProxyTestSuite.SERVICE_SSL_PORT);
-        sslConnector.setSoLingerTime(0);
         addConnector(sslConnector);
     }
 
@@ -95,10 +96,10 @@ class DummyService extends Server implements StartStop {
         serverCertChain = consumer.certChain;
         serverKey = consumer.key;
 
-        SslContextFactory cf = new SslContextFactory(false);
+        SslContextFactory.Server cf = new SslContextFactory.Server();
         cf.setNeedClientAuth(true);
 
-        cf.setIncludeCipherSuites(CryptoUtils.getINCLUDED_CIPHER_SUITES());
+        cf.setIncludeCipherSuites(SystemProperties.getXroadTLSCipherSuites());
         cf.setSessionCachingEnabled(true);
 
         SSLContext ctx = SSLContext.getInstance(CryptoUtils.SSL_PROTOCOL);

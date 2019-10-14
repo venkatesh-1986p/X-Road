@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -181,6 +183,17 @@ public class MultipartEncoder implements AutoCloseable {
      */
     public void write(byte[] content) throws IOException {
         out.write(content);
+    }
+
+    /**
+     * Writes the given bytes into the encoder's output stream.
+     * @param content byte content to write
+     * @param offset offset to the buffer
+     * @param len length to write
+     * @throws IOException
+     */
+    public void write(byte[] content, int offset, int len) throws IOException {
+        out.write(content, offset, len);
     }
 
     /**

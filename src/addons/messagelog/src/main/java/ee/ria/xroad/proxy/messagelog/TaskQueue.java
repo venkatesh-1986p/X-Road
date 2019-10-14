@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -49,6 +51,9 @@ import static ee.ria.xroad.proxy.messagelog.MessageLogDatabaseCtx.doInTransactio
 public class TaskQueue extends UntypedActor {
 
     static final String START_TIMESTAMPING = "StartTimestamping";
+    static final String START_TIMESTAMPING_RETRY_MODE = "StartTimestampingRetryMode";
+    static final double TIMESTAMPED_RECORDS_RATIO_THRESHOLD = 0.7;
+    static final int TIMESTAMP_RECORDS_LIMIT_RETRY_MODE = 1;
 
     @Override
     public void onReceive(Object message) throws Exception {
@@ -56,6 +61,8 @@ public class TaskQueue extends UntypedActor {
 
         if (message.equals(START_TIMESTAMPING)) {
             handleStartTimestamping();
+        } else if (message.equals(START_TIMESTAMPING_RETRY_MODE)) {
+            handleStartTimestamping(TIMESTAMP_RECORDS_LIMIT_RETRY_MODE);
         } else if (message instanceof Timestamper.TimestampSucceeded) {
             handleTimestampSucceeded((Timestamper.TimestampSucceeded) message);
         } else if (message instanceof Timestamper.TimestampFailed) {
@@ -83,6 +90,13 @@ public class TaskQueue extends UntypedActor {
         } finally {
             if (succeeded) {
                 indicateSuccess();
+                // If time-stamped records count equals to time-stamp records limit, there are probably
+                // still records to be time-stamped. Init another another time-stamping round to prevent
+                // messagelog records to begin to bloat.
+                if (message.getMessageRecords().length == MessageLogProperties.getTimestampRecordsLimit()) {
+                    log.info("Time-stamped records count equaled to time-stamp records limit");
+                    handleStartTimestamping();
+                }
             } else {
                 indicateFailure();
             }
@@ -124,10 +138,14 @@ public class TaskQueue extends UntypedActor {
     }
 
     protected void handleStartTimestamping() {
+        handleStartTimestamping(MessageLogProperties.getTimestampRecordsLimit());
+    }
+
+    protected void handleStartTimestamping(int timestampRecordsLimit) {
         List<Task> timestampTasks;
 
         try {
-            timestampTasks = doInTransaction(this::getTimestampTasks);
+            timestampTasks = doInTransaction(session -> getTimestampTasks(session, timestampRecordsLimit));
         } catch (Exception e) {
             log.error("Error getting time-stamp tasks", e);
 
@@ -140,7 +158,15 @@ public class TaskQueue extends UntypedActor {
             return;
         }
 
-        log.info("Start time-stamping {} message records", timestampTasks.size());
+        int timestampTasksSize = timestampTasks.size();
+
+        log.info("Start time-stamping {} message records", timestampTasksSize);
+
+        if (timestampTasksSize / (double) MessageLogProperties.getTimestampRecordsLimit()
+                >= TIMESTAMPED_RECORDS_RATIO_THRESHOLD) {
+            log.warn("Number of time-stamped records is over {} % of 'timestamp-records-limit' value",
+                    TIMESTAMPED_RECORDS_RATIO_THRESHOLD * 100);
+        }
 
         sendToTimestamper(createTimestampTask(timestampTasks));
     }
@@ -173,9 +199,8 @@ public class TaskQueue extends UntypedActor {
     }
 
     @SuppressWarnings("unchecked")
-    private List<Task> getTimestampTasks(Session session) {
-        return session.createQuery(getTaskQueueQuery()).setMaxResults(
-                MessageLogProperties.getTimestampRecordsLimit()).list();
+    private List<Task> getTimestampTasks(Session session, int timestampRecordsLimit) {
+        return session.createQuery(getTaskQueueQuery()).setMaxResults(timestampRecordsLimit).list();
     }
 
     @SuppressWarnings("unchecked")

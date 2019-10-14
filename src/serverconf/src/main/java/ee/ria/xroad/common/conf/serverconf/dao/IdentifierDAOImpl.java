@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,10 +42,11 @@ public class IdentifierDAOImpl extends AbstractDAOImpl<XRoadId> {
      * @param <T> the type of the example
      * @return the identifier
      * @throws Exception if an error occurs
+     * @deprecated Only used by the admin ui from ruby code, to be removed
      */
     @SuppressWarnings("unchecked")
-    public static <T extends XRoadId> T getIdentifier(T example)
-            throws Exception {
+    @Deprecated
+    public static <T extends XRoadId> T getIdentifier(T example) {
         Criteria criteria =
                 get().getSession().createCriteria(example.getClass());
         criteria.add(Example.create(example));

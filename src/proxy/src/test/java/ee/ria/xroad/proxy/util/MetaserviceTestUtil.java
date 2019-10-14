@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,10 +31,11 @@ import ee.ria.xroad.common.message.ProtocolVersion;
 import ee.ria.xroad.common.message.SoapHeader;
 import ee.ria.xroad.common.metadata.ObjectFactory;
 import ee.ria.xroad.common.util.MimeTypes;
+import ee.ria.xroad.common.util.XmlUtils;
 
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
-import org.hibernate.Query;
+import org.hibernate.query.Query;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
@@ -108,7 +111,7 @@ public final class MetaserviceTestUtil {
         try {
             unmarshaller = JAXBContext.newInstance(ObjectFactory.class).createUnmarshaller();
             marshaller = JAXBContext.newInstance(ObjectFactory.class, SoapHeader.class).createMarshaller();
-            documentBuilderFactory = DocumentBuilderFactory.newInstance();
+            documentBuilderFactory = XmlUtils.createDocumentBuilderFactory();
         } catch (JAXBException e) {
             throw new IllegalStateException("Creating instance failed", e);
         }
@@ -324,8 +327,7 @@ public final class MetaserviceTestUtil {
      */
     public static void cleanDB() throws Exception {
         doInTransaction(session -> {
-            Query q = session.createSQLQuery(
-                    "TRUNCATE SCHEMA public AND COMMIT");
+            Query q = session.createSQLQuery("TRUNCATE SCHEMA public AND COMMIT");
             q.executeUpdate();
             return null;
         });

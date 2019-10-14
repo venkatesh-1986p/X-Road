@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,14 +29,14 @@ import ee.ria.xroad.common.conf.serverconf.dao.ClientDAOImpl;
 import ee.ria.xroad.common.conf.serverconf.dao.IdentifierDAOImpl;
 import ee.ria.xroad.common.conf.serverconf.dao.ServerConfDAOImpl;
 import ee.ria.xroad.common.conf.serverconf.dao.ServiceDAOImpl;
-import ee.ria.xroad.common.conf.serverconf.dao.WsdlDAOImpl;
+import ee.ria.xroad.common.conf.serverconf.dao.ServiceDescriptionDAOImpl;
 import ee.ria.xroad.common.conf.serverconf.model.AccessRightType;
 import ee.ria.xroad.common.conf.serverconf.model.ClientType;
 import ee.ria.xroad.common.conf.serverconf.model.GroupMemberType;
 import ee.ria.xroad.common.conf.serverconf.model.LocalGroupType;
 import ee.ria.xroad.common.conf.serverconf.model.ServerConfType;
+import ee.ria.xroad.common.conf.serverconf.model.ServiceDescriptionType;
 import ee.ria.xroad.common.conf.serverconf.model.ServiceType;
-import ee.ria.xroad.common.conf.serverconf.model.WsdlType;
 import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.identifier.LocalGroupId;
 import ee.ria.xroad.common.identifier.ServiceId;
@@ -132,16 +134,16 @@ public class DAOImplTest {
                 SERVICE_VERSION);
         ServiceType service = new ServiceDAOImpl().getService(session, id);
         assertNotNull(service);
-        assertNotNull(service.getWsdl());
-        assertNotNull(service.getWsdl().getClient());
+        assertNotNull(service.getServiceDescription());
+        assertNotNull(service.getServiceDescription().getClient());
         assertEquals(id, ServiceId.create(
-                service.getWsdl().getClient().getIdentifier(),
+                service.getServiceDescription().getClient().getIdentifier(),
                 service.getServiceCode(), service.getServiceVersion()));
 
-        WsdlType wsdl = new WsdlDAOImpl().getWsdl(session, id);
-        assertNotNull(wsdl);
-        assertNotNull(wsdl.getClient());
-        assertEquals(id.getClientId(), wsdl.getClient().getIdentifier());
+        ServiceDescriptionType serviceDescription = new ServiceDescriptionDAOImpl().getServiceDescription(session, id);
+        assertNotNull(serviceDescription);
+        assertNotNull(serviceDescription.getClient());
+        assertEquals(id.getClientId(), serviceDescription.getClient().getIdentifier());
     }
 
     /**
@@ -152,7 +154,7 @@ public class DAOImplTest {
     public void getAcl() throws Exception {
         ClientId id = createTestClientId(client(1));
         List<AccessRightType> acl = getClient(id).getAcl();
-        assertEquals(4, acl.size());
+        assertEquals(6, acl.size());
 
         assertTrue(acl.get(0).getSubjectId() instanceof ClientId);
         assertTrue(acl.get(1).getSubjectId() instanceof ClientId);
@@ -181,25 +183,25 @@ public class DAOImplTest {
     }
 
     /**
-     * Test deleting WSDL.
+     * Test deleting service description.
      * @throws Exception if an error occurs
      */
     @Test
-    public void deleteWsdl() throws Exception {
+    public void deleteServiceDescription() throws Exception {
         ClientId id = createTestClientId(client(3));
         ClientType client = getClient(id);
 
-        assertEquals(TestUtil.NUM_WSDLS, client.getWsdl().size());
+        assertEquals(TestUtil.NUM_SERVICEDESCRIPTIONS, client.getServiceDescription().size());
 
-        WsdlType wsdl = client.getWsdl().get(0);
-        Long wsdlId = wsdl.getId();
+        ServiceDescriptionType serviceDescription = client.getServiceDescription().get(0);
+        Long serviceDescriptionId = serviceDescription.getId();
 
-        client.getWsdl().remove(wsdl);
+        client.getServiceDescription().remove(serviceDescription);
         session.saveOrUpdate(client);
-        session.delete(wsdl);
+        session.delete(serviceDescription);
 
-        assertEquals(TestUtil.NUM_WSDLS - 1, client.getWsdl().size());
-        assertNull(session.get(WsdlType.class, wsdlId));
+        assertEquals(TestUtil.NUM_SERVICEDESCRIPTIONS - 1, client.getServiceDescription().size());
+        assertNull(session.get(ServiceDescriptionType.class, serviceDescriptionId));
     }
 
     /**

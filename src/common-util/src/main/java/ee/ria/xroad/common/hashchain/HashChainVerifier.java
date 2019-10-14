@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +26,7 @@ package ee.ria.xroad.common.hashchain;
 
 import ee.ria.xroad.common.CodedException;
 import ee.ria.xroad.common.util.SchemaValidator;
+import ee.ria.xroad.common.util.XmlUtils;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
@@ -70,6 +73,8 @@ public final class HashChainVerifier {
 
     /** For accessing JAXB functionality. Shared between all the verifiers. */
     private static JAXBContext jaxbCtx;
+
+    private static final String INVALID_HASH_STEP_URI_MSG = "Invalid hash step URI: %s";
 
     private InputStream hashChainResultXml;
     private HashChainReferenceResolver referenceResolver;
@@ -287,7 +292,7 @@ public final class HashChainVerifier {
         JAXBElement<TransformsType> transformsElement = new ObjectFactory().createTransforms(transforms);
 
         // Create the Document
-        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        DocumentBuilderFactory dbf = XmlUtils.createDocumentBuilderFactory();
         DocumentBuilder db = dbf.newDocumentBuilder();
         Document document = db.newDocument();
 
@@ -320,7 +325,7 @@ public final class HashChainVerifier {
         int hashIndex = uri.indexOf('#');
 
         if (hashIndex < 0) {
-            throw new CodedException(X_MALFORMED_HASH_CHAIN, "Invalid hash step URI: %s", uri);
+            throw new CodedException(X_MALFORMED_HASH_CHAIN, INVALID_HASH_STEP_URI_MSG, uri);
         }
 
         String baseUri = uri.substring(0, hashIndex);
@@ -328,7 +333,7 @@ public final class HashChainVerifier {
 
         if (fragment.isEmpty()) {
             // Hash step must be indicated by a fragment in a hash chain.
-            throw new CodedException(X_MALFORMED_HASH_CHAIN, "Invalid hash step URI: %s", uri);
+            throw new CodedException(X_MALFORMED_HASH_CHAIN, INVALID_HASH_STEP_URI_MSG, uri);
         }
 
         HashChainType hashChain;
@@ -347,7 +352,7 @@ public final class HashChainVerifier {
         }
 
         // No hash step with given fragment ID found.
-        throw new CodedException(X_MALFORMED_HASH_CHAIN, "Invalid hash step URI: %s", uri);
+        throw new CodedException(X_MALFORMED_HASH_CHAIN, INVALID_HASH_STEP_URI_MSG, uri);
     }
 
     private HashChainType getHashChain(String uri) throws Exception {

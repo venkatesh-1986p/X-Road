@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -51,7 +53,7 @@ public final class InternalSSLKey {
     public static final String KEY_FILE_NAME = "ssl/internal.p12";
     public static final String KEY_ALIAS = "internal";
     @Getter
-    private static final char[] KEY_PASSWORD = "internal".toCharArray();
+    private static final char[] KEY_PASSWORD = KEY_ALIAS.toCharArray();
 
     private final PrivateKey key;
     private final X509Certificate[] certChain;

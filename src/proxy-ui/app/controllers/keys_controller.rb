@@ -1,6 +1,8 @@
 #
 # The MIT License
-# Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+# Copyright (c) 2018 Estonian Information System Authority (RIA),
+# Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+# Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -165,6 +167,7 @@ class KeysController < ApplicationController
     })
   end
 
+  # rubocop:disable all
   def generate_csr
     audit_log("Generate CSR", audit_log_data = {})
 
@@ -268,6 +271,7 @@ class KeysController < ApplicationController
       :redirect => csr_file
     })
   end
+  # rubocop:enable all
 
   def download_csr
     validate_params({

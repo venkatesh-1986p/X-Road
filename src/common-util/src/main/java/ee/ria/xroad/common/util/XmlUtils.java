@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,18 +25,25 @@
 package ee.ria.xroad.common.util;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.IOUtils;
 import org.apache.xml.security.c14n.Canonicalizer;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
+import org.xml.sax.XMLReader;
+import org.xml.sax.helpers.XMLReaderFactory;
 
+import javax.xml.XMLConstants;
 import javax.xml.namespace.NamespaceContext;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -45,6 +54,7 @@ import javax.xml.xpath.XPathFactory;
 
 import java.io.InputStream;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 /**
@@ -53,7 +63,25 @@ import java.util.Optional;
 @Slf4j
 public final class XmlUtils {
 
+    public static final String FEATURE_EXTERNAL_GENERAL_ENTITIES =
+            "http://xml.org/sax/features/external-general-entities";
+    public static final String FEATURE_DISALLOW_DOCTYPE = "http://apache.org/xml/features/disallow-doctype-decl";
+    public static final String FEATURE_EXTERNAL_PARAMETER_ENTITIES =
+            "http://xml.org/sax/features/external-parameter-entities";
+
+    private static final String ELEMENT_NOT_FOUND_WARNING = "Element not found with getElementXPathNS {}";
+
     private XmlUtils() {
+    }
+
+    /**
+     * Creates a new document object from the given String
+     * @param xml the xml string
+     * @return the created document
+     * @throws Exception if an error occurs
+     */
+    public static Document parseDocument(String xml) throws Exception {
+        return XmlUtils.parseDocument(IOUtils.toInputStream(xml, StandardCharsets.UTF_8));
     }
 
     /**
@@ -74,15 +102,12 @@ public final class XmlUtils {
      * @throws Exception if an error occurs
      */
     public static Document parseDocument(InputStream documentXml, boolean namespaceAware) throws Exception {
-        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        DocumentBuilderFactory dbf = createDocumentBuilderFactory();
 
         dbf.setNamespaceAware(namespaceAware);
         dbf.setIgnoringComments(true);
 
         dbf.setValidating(false);
-        dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-        dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
-        dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
 
         return dbf.newDocumentBuilder().parse(documentXml);
     }
@@ -97,7 +122,8 @@ public final class XmlUtils {
         Source source = new DOMSource(node);
         StringWriter writer = new StringWriter();
         Result result = new StreamResult(writer);
-        Transformer t = TransformerFactory.newInstance().newTransformer();
+
+        Transformer t = createTransformerFactory().newTransformer();
         t.transform(source, result);
 
         return writer.toString();
@@ -133,7 +159,7 @@ public final class XmlUtils {
 
             return (Element) xpath.evaluate(xpathExpr, parent, XPathConstants.NODE);
         } catch (XPathExpressionException e) {
-            log.warn("Element not found with getElementXPathNS {}", e);
+            log.warn(ELEMENT_NOT_FOUND_WARNING, e);
 
             return null;
         }
@@ -157,7 +183,7 @@ public final class XmlUtils {
 
             return (NodeList) xpath.evaluate(xpathExpr, parent, XPathConstants.NODESET);
         } catch (XPathExpressionException e) {
-            log.warn("Element not found with getElementXPathNS {}", e);
+            log.warn(ELEMENT_NOT_FOUND_WARNING, e);
 
             return null;
         }
@@ -181,7 +207,7 @@ public final class XmlUtils {
 
             return (Element) xpath.evaluate("//*[@Id = '" + id + "']", doc, XPathConstants.NODE);
         } catch (XPathExpressionException e) {
-            log.warn("Element not found with getElementXPathNS {}", e);
+            log.warn(ELEMENT_NOT_FOUND_WARNING, e);
 
             return null;
         }
@@ -197,6 +223,16 @@ public final class XmlUtils {
      */
     public static byte[] canonicalize(String algorithmUri, Node node) throws Exception {
         return Canonicalizer.getInstance(algorithmUri).canonicalizeSubtree(node);
+    }
+
+    /**
+     * Pretty prints the document to string using default charset
+     * @param xml the xml document as string
+     * @return pretty printed document as String
+     * @throws Exception if any errors occur
+     */
+    public static String prettyPrintXml(String xml) throws Exception {
+        return prettyPrintXml(parseDocument(xml));
     }
 
     /**
@@ -220,12 +256,59 @@ public final class XmlUtils {
         StringWriter stringWriter = new StringWriter();
         StreamResult output = new StreamResult(stringWriter);
 
-        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+        Transformer transformer = createTransformerFactory().newTransformer();
         transformer.setOutputProperty(OutputKeys.INDENT, "yes");
         transformer.setOutputProperty(OutputKeys.ENCODING, charset);
         transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
         transformer.transform(new DOMSource(document), output);
 
         return output.getWriter().toString().trim();
+    }
+
+    /**
+     * Creates DocumentBuilderFactory and sets the features of the factory
+     * @return
+     */
+    public static DocumentBuilderFactory createDocumentBuilderFactory() {
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        try {
+            dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        } catch (ParserConfigurationException e) {
+            log.warn("XMLConstants.FEATURE_SECURE_PROCESSING not supported");
+        }
+        try {
+            dbf.setFeature(FEATURE_DISALLOW_DOCTYPE, true);
+        } catch (ParserConfigurationException e) {
+            log.warn("disallow-doctype-decl not supported");
+        }
+        try {
+            dbf.setFeature(FEATURE_EXTERNAL_GENERAL_ENTITIES, false);
+        } catch (ParserConfigurationException e) {
+            log.warn("external-general-entities not supported");
+        }
+        try {
+            dbf.setFeature(FEATURE_EXTERNAL_PARAMETER_ENTITIES, false);
+        } catch (ParserConfigurationException e) {
+            log.warn("external-parameter-entities not supported");
+        }
+        return dbf;
+    }
+
+    /**
+     * Creates XMLReader and sets the features of the reader
+     * @return
+     * @throws SAXException
+     */
+    public static XMLReader createXmlReader() throws SAXException {
+        XMLReader reader = XMLReaderFactory.createXMLReader();
+        reader.setFeature(FEATURE_DISALLOW_DOCTYPE, true);
+        reader.setFeature(FEATURE_EXTERNAL_GENERAL_ENTITIES, false);
+        return reader;
+    }
+
+    private static TransformerFactory createTransformerFactory() throws TransformerConfigurationException {
+        final TransformerFactory factory = TransformerFactory.newInstance();
+        factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        return factory;
     }
 }

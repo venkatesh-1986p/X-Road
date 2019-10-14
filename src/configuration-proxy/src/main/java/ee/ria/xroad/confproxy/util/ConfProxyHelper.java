@@ -1,6 +1,8 @@
 /**
  * The MIT License
- * Copyright (c) 2015 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +26,6 @@ package ee.ria.xroad.confproxy.util;
 
 import ee.ria.xroad.common.SystemProperties;
 import ee.ria.xroad.common.conf.globalconf.ConfigurationDirectory;
-import ee.ria.xroad.common.conf.globalconf.ConfigurationDirectoryV1;
 import ee.ria.xroad.common.conf.globalconf.ConfigurationDirectoryV2;
 import ee.ria.xroad.confproxy.ConfProxyProperties;
 
@@ -52,6 +53,7 @@ public final class ConfProxyHelper {
     private static final int ERROR_CODE_EXPIRED_CONF = 123;
     private static final int ERROR_CODE_CANNOT_DOWNLOAD_CONF = 122;
     private static final int MAX_CONFIGURATION_LIFETIME_SECONDS = 600;
+    private static final String CONFIGURATION_CLIENT_ERROR = "configuration-client error (exit code %1$d)";
 
     /**
      * Unavailable utility class constructor.
@@ -76,11 +78,7 @@ public final class ConfProxyHelper {
         log.info("Running '{} {} {} {}' ...", ConfProxyProperties.getDownloadScriptPath(), sourceAnchor, path,
             version);
         runConfClient(pb);
-        if (version != SystemProperties.CURRENT_GLOBAL_CONFIGURATION_VERSION) {
-            return new ConfigurationDirectoryV1(path);
-        } else {
-            return new ConfigurationDirectoryV2(path);
-        }
+        return new ConfigurationDirectoryV2(path);
     }
 
     /**
@@ -127,21 +125,20 @@ public final class ConfProxyHelper {
             case SUCCESS:
                 break;
             case ERROR_CODE_CANNOT_DOWNLOAD_CONF:
-                throw new Exception("configuration-client error (exit code "
-                        + exitCode + "), download failed");
+                throw new Exception(String.format(CONFIGURATION_CLIENT_ERROR, exitCode)
+                        + ", download failed");
             case ERROR_CODE_EXPIRED_CONF:
-                throw new Exception("configuration-client error (exit code "
-                        + exitCode + "), configuration is outdated");
+                throw new Exception(String.format(CONFIGURATION_CLIENT_ERROR, exitCode)
+                        + ", configuration is outdated");
             case ERROR_CODE_INVALID_SIGNATURE_VALUE:
-                throw new Exception("configuration-client error (exit code "
-                        + exitCode + "), configuration is incorrect");
+                throw new Exception(String.format(CONFIGURATION_CLIENT_ERROR, exitCode)
+                        + ", configuration is incorrect");
             case ERROR_CODE_INTERNAL:
-                throw new Exception("configuration-client error (exit code "
-                        + exitCode + ")");
+                throw new Exception(String.format(CONFIGURATION_CLIENT_ERROR, exitCode));
             default:
-                throw new Exception("Failed to download GlobalConf "
-                        + "(configuration-client exit code " + exitCode + "), "
-                        + "make sure configuration-client is"
+                throw new Exception("Failed to download GlobalConf ["
+                        + String.format(CONFIGURATION_CLIENT_ERROR, exitCode)
+                        + "], make sure configuration-client is"
                         + "installed correctly");
         }
     }
